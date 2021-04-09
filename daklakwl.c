@@ -194,60 +194,49 @@ static bool daklakwl_seat_composing_handle_key_event(
         seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
 
     switch (keysym) {
-    case XKB_KEY_Henkan_Mode:
-        if (!ctrl_active)
+        case XKB_KEY_Escape:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_buffer_clear(&seat->buffer);
+            daklakwl_seat_composing_update(seat);
+            return true;
+        case XKB_KEY_BackSpace:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_buffer_delete_backwards(&seat->buffer, 1);
+            daklakwl_seat_composing_update(seat);
+            return true;
+        case XKB_KEY_Delete:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_buffer_delete_forwards(&seat->buffer, 1);
+            daklakwl_seat_composing_update(seat);
+            return true;
+        case XKB_KEY_Left:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_buffer_move_left(&seat->buffer);
+            daklakwl_seat_composing_update(seat);
+            return true;
+        case XKB_KEY_Right:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_buffer_move_right(&seat->buffer);
+            daklakwl_seat_composing_update(seat);
+            return true;
+        case XKB_KEY_space:
+            if (ctrl_active) {
+                seat->is_composing = false;
+                daklakwl_buffer_clear(&seat->buffer);
+                daklakwl_seat_composing_update(seat);
+                return true;
+            }
             return false;
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_Muhenkan:
-        seat->is_composing = false;
-        daklakwl_buffer_clear(&seat->buffer);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_Escape:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_clear(&seat->buffer);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_BackSpace:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_delete_backwards(&seat->buffer, 1);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_Delete:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_delete_forwards(&seat->buffer, 1);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_Left:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_move_left(&seat->buffer);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_Right:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_move_right(&seat->buffer);
-        daklakwl_seat_composing_update(seat);
-        return true;
-    case XKB_KEY_space:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_buffer_convert_trailing_n(&seat->buffer);
-        anthy_reset_context(seat->anthy_context);
-        anthy_set_string(seat->anthy_context, seat->buffer.text);
-        struct anthy_conv_stat conv_stat;
-        anthy_get_stat(seat->anthy_context, &conv_stat);
-        return true;
-    case XKB_KEY_Return:
-        if (seat->buffer.len == 0)
-            return false;
-        daklakwl_seat_composing_commit(seat);
-        return true;
+        case XKB_KEY_Return:
+            if (seat->buffer.len == 0)
+                return false;
+            daklakwl_seat_composing_commit(seat);
+            return true;
     }
 
     uint32_t codepoint = xkb_state_key_get_utf32(seat->xkb_state, keycode);
@@ -272,9 +261,12 @@ static bool daklakwl_seat_handle_key(struct daklakwl_seat *seat,
     xkb_keycode_t keycode)
 {
     xkb_keysym_t keysym = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
+    bool ctrl_active = xkb_state_mod_name_is_active(
+        seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
+
     if (seat->is_composing)
         return daklakwl_seat_composing_handle_key_event(seat, keycode);
-    if (keysym == XKB_KEY_Henkan_Mode) {
+    if (keysym == XKB_KEY_space && ctrl_active) {
         seat->is_composing = true;
         return true;
     }
@@ -464,6 +456,7 @@ static void zwp_input_method_v2_surrounding_text(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2,
     char const *text, uint32_t cursor, uint32_t anchor)
 {
+    printf("surrounding text: %s\n", text);
     struct daklakwl_seat *seat = data;
     free(seat->pending_surrounding_text);
     seat->pending_surrounding_text = strdup(text);
