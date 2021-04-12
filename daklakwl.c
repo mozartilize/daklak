@@ -43,10 +43,10 @@ struct daklakwl_state {
     struct wl_registry *wl_registry;
     struct wl_compositor *wl_compositor;
     struct wl_shm *wl_shm;
+    struct zwp_text_input_manager_v3 *zwp_text_input_manager_v3;
     struct zwp_input_method_manager_v2 *zwp_input_method_manager_v2;
     struct zwp_virtual_keyboard_manager_v1 *zwp_virtual_keyboard_manager_v1;
     struct wl_list seats;
-    struct wl_list outputs;
     struct wl_list timers;
     int max_scale;
 };
@@ -57,19 +57,13 @@ struct daklakwl_timer {
     void (*callback)(struct daklakwl_timer *timer);
 };
 
-struct daklakwl_output {
-    struct wl_list link;
-    struct daklakwl_state *state;
-    struct wl_output *wl_output;
-    int pending_scale, scale;
-};
-
 struct daklakwl_seat {
     struct wl_list link;
     struct daklakwl_state *state;
     struct wl_seat *wl_seat;
 
     bool are_protocols_initted;
+    struct zwp_text_input_v3 *zwp_text_input_v3;
     struct zwp_input_method_v2 *zwp_input_method_v2;
     struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2;
     struct zwp_virtual_keyboard_v1 *zwp_virtual_keyboard_v1;
@@ -225,6 +219,8 @@ static bool daklakwl_seat_composing_handle_key_event(
             daklakwl_seat_composing_update(seat);
             return true;
         case XKB_KEY_space:
+			if (seat->buffer.len == 0)
+                return false;
             if (ctrl_active) {
                 seat->is_composing = false;
                 daklakwl_buffer_clear(&seat->buffer);
@@ -250,8 +246,18 @@ static bool daklakwl_seat_composing_handle_key_event(
     char *utf8 = malloc(utf8_len + 1);
     xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
     daklakwl_buffer_append(&seat->buffer, utf8);
-    daklakwl_buffer_convert_romaji(&seat->buffer);
-    daklakwl_seat_composing_update(seat);
+    // daklakwl_buffer_convert_romaji(&seat->buffer);
+    // daklakwl_seat_composing_update(seat);
+    // if (seat->pending_surrounding_text != NULL && strcmp(seat->pending_surrounding_text, "aa") == 0) {
+    //     zwp_input_method_v2_delete_surrounding_text(seat->zwp_input_method_v2, 2, 2);
+    //     zwp_input_method_v2_commit_string(
+    //         seat->zwp_input_method_v2, "â");
+    //     zwp_input_method_v2_commit(
+    //         seat->zwp_input_method_v2, seat->done_events_received);
+    // }
+    printf("1. surrounding text: %s, buffer: %s\n", seat->surrounding_text, seat->buffer.text);
+    daklakwl_seat_composing_commit(seat);
+    printf("2. surrounding text: %s, buffer: %s\n", seat->surrounding_text, seat->buffer.text);
     free(utf8);
 
     return true;
@@ -456,8 +462,15 @@ static void zwp_input_method_v2_surrounding_text(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2,
     char const *text, uint32_t cursor, uint32_t anchor)
 {
-    printf("surrounding text: %s\n", text);
+    printf("surrounding text event: %s\n", text);
     struct daklakwl_seat *seat = data;
+    if (strcmp(text, "aa") == 0) {
+        zwp_input_method_v2_delete_surrounding_text(zwp_input_method_v2, 2, 2);
+        zwp_input_method_v2_commit_string(
+            zwp_input_method_v2, "â");
+        zwp_input_method_v2_commit(
+            zwp_input_method_v2, seat->done_events_received);
+    }
     free(seat->pending_surrounding_text);
     seat->pending_surrounding_text = strdup(text);
     seat->pending_surrounding_text_cursor = cursor;
@@ -484,6 +497,7 @@ static void zwp_input_method_v2_content_type(
 static void zwp_input_method_v2_done(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2)
 {
+    printf("done event\n");
     struct daklakwl_seat *seat = data;
     bool was_active = seat->active;
     seat->active = seat->pending_activate;
@@ -546,53 +560,6 @@ static void wl_seat_global(struct daklakwl_state *state, void *data) {
     wl_list_insert(&state->seats, &seat->link);
 }
 
-static void wl_output_geometry(void *data, struct wl_output *wl_output,
-    int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
-    int32_t subpixel, const char *make, const char *model, int32_t transform)
-{
-}
-
-static void wl_output_mode(void *data, struct wl_output *wl_output,
-    uint32_t flags, int32_t width, int32_t height, int32_t refresh)
-{
-}
- 
-static void wl_output_done(void *data, struct wl_output *wl_output) {
-    struct daklakwl_output *output = data;
-    output->scale = output->pending_scale;
-
-    int scale = 0;
-    struct daklakwl_output *output_iter;
-    wl_list_for_each(output_iter, &output->state->outputs, link) {
-        if (output_iter->scale > scale)
-            scale = output_iter->scale;
-    }
-    output->state->max_scale = scale;
-}
-
-static void wl_output_scale(void *data, struct wl_output *wl_output,
-    int32_t factor)
-{
-    struct daklakwl_output *output = data;
-    output->pending_scale = factor;
-}
-
-static struct wl_output_listener const wl_output_listener = {
-    .geometry = wl_output_geometry,
-    .mode = wl_output_mode,
-    .done = wl_output_done,
-    .scale = wl_output_scale,
-};
-
-static void wl_output_global(struct daklakwl_state *state, void *data) {
-    struct wl_output *wl_output = data;
-    struct daklakwl_output *output = calloc(1, sizeof *output);
-    output->state = state;
-    output->wl_output = wl_output;
-    wl_output_add_listener(output->wl_output, &wl_output_listener, output);
-    wl_list_insert(&state->outputs, &output->link);
-}
-
 struct daklakwl_global {
     char const *name;
     struct wl_interface const *interface;
@@ -617,13 +584,6 @@ static struct daklakwl_global const globals[] = {
         .version = 4,
         .is_singleton = true,
         .offset = offsetof(struct daklakwl_state, wl_compositor),
-    },
-    {
-        .name = "wl_output",
-        .interface = &wl_output_interface,
-        .version = 3,
-        .is_singleton = false,
-        .callback = wl_output_global,
     },
     {
         .name = "wl_seat",
@@ -687,9 +647,7 @@ static struct wl_registry_listener const wl_registry_listener = {
 };
 
 static bool daklakwl_state_init(struct daklakwl_state *state) {
-    // wl_list_init(&state->buffers);
     wl_list_init(&state->seats);
-    wl_list_init(&state->outputs);
     wl_list_init(&state->timers);
     state->max_scale = 1;
  
