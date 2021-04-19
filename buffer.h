@@ -1,11 +1,15 @@
 #pragma once
 
 #include <stddef.h>
+#include <wchar.h>
 
-struct daklakwl_buffer {
-    char *text;
-    size_t len;
-    size_t pos;
+struct daklakwl_buffer
+{
+	char *text;
+	char *pending_text;
+	size_t len;
+	size_t pos;
+	char accent;
 };
 
 void daklakwl_buffer_init(struct daklakwl_buffer *);
