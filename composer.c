@@ -167,7 +167,104 @@ int compose(struct buffer *buf) {
 	if (buf->len >= 4) c3 = wc_text[3];
 	if (buf->len >= 5) c4 = wc_text[4];
 
-	if (vowels[c0] && vowels[c1] && !vowels[c2] && marks[c3]) {
+	if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && accents[c4]) {
+		// TODO: shall we?
+		if (vowels_accents[c1 + c3]) {
+			char *c0_override = (char *) calloc(1, sizeof(char));
+			char *c2_override = (char *) calloc(1, sizeof(char));
+			char *c3_override = (char *) calloc(1, sizeof(char));
+			wctomb(c0_override, c0);
+			wctomb(c2_override, c2);
+			wctomb(c3_override, c3);
+			strcat(c0_override, vowels_accents[c1 + c3]);
+			strcat(c0_override, c2_override);
+			strcat(c0_override, c3_override);
+			free(c2_override);
+			buf->text = c0_override;
+			return 1;
+		}
+	}
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && marks[c4]) {
+		if (type2[c0 + c1 + c2]) {
+			char const *const *vowels_marks = vowels[c2];
+			if (vowels_marks[c4]) {
+				char *c0_override = (char *) calloc(1, sizeof(char));
+				char *c1_override = (char *) calloc(1, sizeof(char));
+				char *c3_override = (char *) calloc(1, sizeof(char));
+				wctomb(c0_override, c0);
+				wctomb(c1_override, c1);
+				wctomb(c3_override, c3);
+				strcat(c0_override, c1_override);
+				strcat(c0_override, vowels_marks[c3]);
+				strcat(c0_override, c3_override);
+				free(c1_override);
+				free(c3_override);
+				buf->text = c0_override;
+				return 1;
+			}
+		}
+		else {
+			char const *const *vowels_marks = vowels[c1];
+			if (vowels_marks[c4]) {
+				char *c0_override = (char *) calloc(1, sizeof(char));
+				char *c2_override = (char *) calloc(1, sizeof(char));
+				wctomb(c0_override, c0);
+				wctomb(c2_override, c2);
+				strcat(c0_override, vowels_marks[c3]);
+				strcat(c0_override, c2_override);
+				free(c2_override);
+				buf->text = c0_override;
+				return 1;
+			}
+
+		}
+	}
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && accents[c3]) {
+		// TODO: handle uouw and uyee
+		if (vowels_accents[c1 + c3]) {
+			char *c0_override = (char *) calloc(1, sizeof(char));
+			char *c2_override = (char *) calloc(1, sizeof(char));
+			wctomb(c0_override, c0);
+			wctomb(c2_override, c2);
+			strcat(c0_override, vowels_accents[c1 + c3]);
+			strcat(c0_override, c2_override);
+			free(c2_override);
+			buf->text = c0_override;
+			return 1;
+		}
+	}
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && marks[c3]) {
+		if (type2[c0 + c1 + c2]) {
+			char const *const *vowels_marks = vowels[c2];
+			if (vowels_marks[c3]) {
+				char *c0_override = (char *) calloc(1, sizeof(char));
+				char *c1_override = (char *) calloc(1, sizeof(char));
+				wctomb(c0_override, c0);
+				wctomb(c1_override, c1);
+				strcat(c0_override, c1_override);
+				strcat(c0_override, vowels_marks[c3]);
+				free(c1_override);
+				buf->text = c0_override;
+				return 1;
+			}
+		}
+		else {
+			char const *const *vowels_marks = vowels[c1];
+			if (vowels_marks[c3]) {
+				char *c0_override = (char *) calloc(1, sizeof(char));
+				char *c2_override = (char *) calloc(1, sizeof(char));
+				wctomb(c0_override, c0);
+				wctomb(c2_override, c2);
+				strcat(c0_override, vowels_marks[c3]);
+				strcat(c0_override, c2_override);
+				free(c2_override);
+				buf->text = c0_override;
+				return 1;
+			}
+
+		}
+	}
+	else if (vowels[c0] && vowels[c1] && !vowels[c2] && marks[c3]) {
 		if (type1[c0 + c1] || type2[c0 + c1]) {
 			char const *const *vowels_marks = vowels[c1];
 			if (vowels_marks[c2]) {
