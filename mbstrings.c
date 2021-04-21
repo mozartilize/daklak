@@ -7,6 +7,18 @@
 #include "mbstrings.h"
 
 /**
+ ** @brief A helper type to ensure proper initialization of @c
+ ** mbstate_t variables
+ **
+ ** Not to be used directly
+ ** @see MBSTATE
+ **/
+union mbstate_t_ {
+  unsigned char bytes[sizeof(mbstate_t)];
+  mbstate_t state;
+} mbstate_t_;
+
+/**
  ** @file
  ** @brief implement multibyte character string helpers
  **/

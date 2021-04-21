@@ -1,3 +1,5 @@
+#ifndef MBSTRINGS_H
+#define MBSTRINGS_H
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -57,18 +59,6 @@ typedef uint_least16_t char16_t;
  ** repetition of a @c typedef, as long as it is consistent.
  **/
 typedef uint_least32_t char32_t;
-
-/**
- ** @brief A helper type to ensure proper initialization of @c
- ** mbstate_t variables
- **
- ** Not to be used directly
- ** @see MBSTATE
- **/
-union mbstate_t_ {
-  unsigned char bytes[sizeof(mbstate_t)];
-  mbstate_t state;
-} mbstate_t_;
 
 /**
  ** @brief Provide a pointer to a properly initialized @c mbstate_t
@@ -515,7 +505,7 @@ size_t mbsspn_name(char const* s1, char const name[static 1]);
  ** string that doesn't correspond to wide characters in string
  ** @a S2.
  **
- ** @see mbsrwcsskip 
+ ** @see mbsrwcsskip
  **/
 char const* mbsrwcscskip(char const s1[static 1], mbstate_t*restrict state, wchar_t const* S2);
 
@@ -582,4 +572,4 @@ unsigned long mbsrtoul(char const*restrict s1, mbstate_t*restrict state, char**r
  ** @see strtoull
  **/
 unsigned long long mbsrtoull(char const*restrict s1, mbstate_t*restrict state, char**restrict endptr, int base);
-
+#endif

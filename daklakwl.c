@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#include <locale.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -13,7 +14,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include <anthy/anthy.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
@@ -102,8 +102,6 @@ struct daklakwl_seat
 
 	// composing
 	bool is_composing;
-
-	anthy_context_t anthy_context;
 };
 
 static struct wl_seat_listener const wl_seat_listener;
@@ -120,8 +118,6 @@ static void daklakwl_seat_init(struct daklakwl_seat *seat,
 	if (state->running)
 		daklakwl_seat_init_protocols(seat);
 	daklakwl_buffer_init(&seat->buffer);
-	seat->anthy_context = anthy_create_context();
-	anthy_context_set_encoding(seat->anthy_context, ANTHY_UTF8_ENCODING);
 	seat->repeat_timer.callback = daklakwl_seat_repeat_timer_callback;
 	seat->is_composing = true;
 }
@@ -150,7 +146,6 @@ static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
 
 static void daklakwl_seat_destroy(struct daklakwl_seat *seat)
 {
-	anthy_release_context(seat->anthy_context);
 	daklakwl_buffer_destroy(&seat->buffer);
 	free(seat->pending_surrounding_text);
 	free(seat->surrounding_text);
@@ -186,6 +181,7 @@ static void daklakwl_seat_composing_commit(struct daklakwl_seat *seat)
 		seat->zwp_input_method_v2, seat->buffer.text);
 	zwp_input_method_v2_commit(
 		seat->zwp_input_method_v2, seat->done_events_received);
+	daklakwl_buffer_clear(&seat->buffer);
 }
 
 static bool daklakwl_seat_composing_handle_key_event(
@@ -197,10 +193,34 @@ static bool daklakwl_seat_composing_handle_key_event(
 
 	switch (keysym)
 	{
+	case XKB_KEY_BackSpace:
+		if (seat->buffer.len == 0)
+			return false;
+		daklakwl_buffer_delete_backwards(&seat->buffer, 1);
+		daklakwl_seat_composing_update(seat);
+		return true;
+	case XKB_KEY_Delete:
+		if (seat->buffer.len == 0)
+			return false;
+		daklakwl_buffer_delete_forwards(&seat->buffer, 1);
+		daklakwl_seat_composing_update(seat);
+		return true;
+	case XKB_KEY_Left:
+		if (seat->buffer.len == 0)
+			return false;
+		daklakwl_buffer_move_left(&seat->buffer);
+		daklakwl_seat_composing_update(seat);
+		return true;
+	case XKB_KEY_Right:
+		if (seat->buffer.len == 0)
+			return false;
+		daklakwl_buffer_move_right(&seat->buffer);
+		daklakwl_seat_composing_update(seat);
+		return true;
 	case XKB_KEY_space:
 		if (seat->buffer.len == 0)
 			return false;
-		daklakwl_buffer_clear(&seat->buffer);
+		daklakwl_seat_composing_commit(seat);
 		if (ctrl_active)
 		{
 			seat->is_composing = false;
@@ -210,7 +230,7 @@ static bool daklakwl_seat_composing_handle_key_event(
 	case XKB_KEY_Return:
 		if (seat->buffer.len == 0)
 			return false;
-		daklakwl_buffer_clear(&seat->buffer);
+		daklakwl_seat_composing_commit(seat);
 		return false;
 	}
 
@@ -225,13 +245,14 @@ static bool daklakwl_seat_composing_handle_key_event(
 
 	char *utf8 = malloc(utf8_len + 1);
 	xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
+	if (!daklak_is_vowel(utf8[0]) && seat->buffer.len == 0) {
+		free(utf8);
+		return false;
+	}
 	daklakwl_buffer_append(&seat->buffer, utf8);
-	zwp_input_method_v2_commit_string(
-		seat->zwp_input_method_v2, utf8);
-	zwp_input_method_v2_commit(
-		seat->zwp_input_method_v2, seat->done_events_received);
+	daklakwl_buffer_compose(&seat->buffer);
+	daklakwl_seat_composing_update(seat);
 	free(utf8);
-	printf("buffer text: %s\n", seat->buffer.text);
 	return true;
 }
 
@@ -777,12 +798,7 @@ static void daklakwl_state_finish(struct daklakwl_state *state)
 
 int main(void)
 {
-	if (anthy_init() != 0)
-	{
-		perror("anthy_init");
-		return 1;
-	}
-	atexit(anthy_quit);
+	setlocale(LC_CTYPE, "en_US.utf8");
 	struct daklakwl_state state = {0};
 	if (!daklakwl_state_init(&state))
 		return 1;
