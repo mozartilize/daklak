@@ -235,7 +235,6 @@ static bool daklakwl_seat_composing_handle_key_event(
 	}
 
 	uint32_t codepoint = xkb_state_key_get_utf32(seat->xkb_state, keycode);
-	printf("%d\n", codepoint);
 	if (codepoint != 0 && codepoint < 32)
 		return false;
 
@@ -245,6 +244,18 @@ static bool daklakwl_seat_composing_handle_key_event(
 
 	char *utf8 = malloc(utf8_len + 1);
 	xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
+
+	if (seat->buffer.gi[0] == '\0' && (utf8[0] == 'g' || utf8[0] == 'q')) {
+		seat->buffer.gi = strdup(utf8);
+	}
+	else if (seat->buffer.gi && (seat->buffer.gi[0] == 'g' || seat->buffer.gi[0] == 'q')) {
+		if (utf8[0] == 'i' || utf8[0] == 'u') {
+			strcat(seat->buffer.gi, utf8);
+		} else if (seat->buffer.len == 0) {
+			// free(seat->buffer.gi);
+			seat->buffer.gi[0] = '\0';
+		}
+	}
 	if (!daklak_is_vowel(utf8[0]) && seat->buffer.len == 0) {
 		free(utf8);
 		return false;
@@ -463,7 +474,6 @@ static void zwp_input_method_v2_surrounding_text(
 	void *data, struct zwp_input_method_v2 *zwp_input_method_v2,
 	char const *text, uint32_t cursor, uint32_t anchor)
 {
-	printf("surrounding text event: %s\n", text);
 	struct daklakwl_seat *seat = data;
 	free(seat->pending_surrounding_text);
 	seat->pending_surrounding_text = strdup(text);
@@ -491,7 +501,6 @@ static void zwp_input_method_v2_content_type(
 static void zwp_input_method_v2_done(
 	void *data, struct zwp_input_method_v2 *zwp_input_method_v2)
 {
-	printf("done event\n");
 	struct daklakwl_seat *seat = data;
 	bool was_active = seat->active;
 	seat->active = seat->pending_activate;

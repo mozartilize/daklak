@@ -29,7 +29,6 @@ daklak_bin = executable(
     'daklak',
     'daklakwl.c',
     'buffer.c',
-    'mbstrings.c',
     dependencies: [
         wayland_client_dep,
         wayland_cursor_dep,

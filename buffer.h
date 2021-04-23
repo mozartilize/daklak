@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <wchar.h>
 
@@ -10,8 +11,11 @@ struct daklakwl_buffer
 	size_t len;
 	size_t pos;
 	char accent;
+	char *gi;
 };
 
+size_t mbslen(const char *);
+wchar_t *mbsrdup(const char *);
 int daklak_is_vowel(char);
 void daklakwl_buffer_init(struct daklakwl_buffer *);
 void daklakwl_buffer_destroy(struct daklakwl_buffer *);
