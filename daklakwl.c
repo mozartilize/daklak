@@ -208,12 +208,20 @@ static bool daklakwl_seat_composing_handle_key_event(
 	case XKB_KEY_Left:
 		if (seat->buffer.len == 0)
 			return false;
+		if (seat->buffer.pos == 0) {
+			daklakwl_seat_composing_commit(seat);
+			return false;
+		}
 		daklakwl_buffer_move_left(&seat->buffer);
 		daklakwl_seat_composing_update(seat);
 		return true;
 	case XKB_KEY_Right:
 		if (seat->buffer.len == 0)
 			return false;
+		if (seat->buffer.pos == seat->buffer.len) {
+			daklakwl_seat_composing_commit(seat);
+			return false;
+		}
 		daklakwl_buffer_move_right(&seat->buffer);
 		daklakwl_seat_composing_update(seat);
 		return true;
@@ -247,19 +255,17 @@ static bool daklakwl_seat_composing_handle_key_event(
 	char *utf8 = malloc(utf8_len + 1);
 	xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
 
-	if (seat->buffer.gi[0] == '\0' && (utf8[0] == 'g' || utf8[0] == 'q' || utf8[0] == 'd')) {
+	if (seat->buffer.len == 0 && seat->buffer.gi[0] == '\0' && (utf8[0] == 'g' || utf8[0] == 'q' || utf8[0] == 'd')) {
 		seat->buffer.gi = strcat(seat->buffer.gi, utf8);
 	}
 	else if (seat->buffer.gi[0] == 'g' || seat->buffer.gi[0] == 'q') {
 		if (utf8[0] == 'i' || utf8[0] == 'u') {
 			strcat(seat->buffer.gi, utf8);
 		} else if (seat->buffer.len == 0) {
-			// free(seat->buffer.gi);
 			seat->buffer.gi[0] = '\0';
 		}
 	}
 
-	printf("%s\n", (&seat->buffer)->gi);
 	if (daklakwl_buffer_should_not_append(&seat->buffer, utf8)) {
 		free(utf8);
 		return false;
