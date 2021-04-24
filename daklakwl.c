@@ -753,7 +753,7 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 			.events = POLLIN,
 		};
 
-	if (poll(&pfd, 1, daklakwl_state_next_timer(state)) == -1)
+		if (poll(&pfd, 1, daklakwl_state_next_timer(state)) == -1)
 		{
 			if (errno == EINTR)
 				continue;
