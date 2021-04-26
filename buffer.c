@@ -288,24 +288,6 @@ static int const marks[128] = {
 	[L'j'] = 1,
 };
 
-static int const type1[7929 * 2] = {
-	[L'â'] = 1,
-	[L'i' + L'ê'] = 1,
-	[L'u' + L'â'] = 1,
-	[L'u' + L'ô'] = 1,
-	[L'ư' + L'ơ'] = 1,
-	[L'y' + L'ê'] = 1,
-};
-
-static int const type2[7929 * 3] = {
-	[L'ă'] = 1,
-	[L'o' + L'ă'] = 1,
-	[L'o' + L'o'] = 1,
-	[L'u' + L'i'] = 1,
-	[L'u' + L'ă'] = 1,
-	[L'u' + L'y' + L'ê'] = 1,
-};
-
 static int const type1_c0[7929] = {
 	[L'â'] = 1,
 	[L'i'] = 1,
