@@ -258,7 +258,7 @@ static bool daklakwl_seat_composing_handle_key_event(
 	if (seat->buffer.len == 0 && seat->buffer.gi[0] == '\0' && (utf8[0] == 'g' || utf8[0] == 'q' || utf8[0] == 'd')) {
 		seat->buffer.gi = strcat(seat->buffer.gi, utf8);
 	}
-	else if (seat->buffer.gi[0] == 'g' || seat->buffer.gi[0] == 'q') {
+	else if (strlen(seat->buffer.gi) == 1 && (seat->buffer.gi[0] == 'g' || seat->buffer.gi[0] == 'q')) {
 		if (utf8[0] == 'i' || utf8[0] == 'u') {
 			strcat(seat->buffer.gi, utf8);
 		} else if (seat->buffer.len == 0) {
