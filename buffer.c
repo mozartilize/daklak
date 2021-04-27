@@ -505,50 +505,24 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 
 	if (vowels[c0] && vowels[c1] && !vowels[c2] && !vowels[c3] && marks[towlower(c4)])
 	{
-		if (is_type1(c0, c1) || is_type2(c0, c1, '\0') || strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0)
+		char const *const *vowels_marks = vowels[c1];
+		if (vowels_marks[towlower(c4)])
 		{
-			char const *const *vowels_marks = vowels[c1];
-			if (vowels_marks[towlower(c4)])
-			{
-				char *c0_override = (char *)calloc(1, sizeof(char));
-				char *c2_override = (char *)calloc(1, sizeof(char));
-				char *c3_override = (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c2_override, c2);
-				wctomb(c3_override, c3);
-				strcat(c0_override, vowels_marks[towlower(c4)]);
-				strcat(c0_override, c2_override);
-				strcat(c0_override, c3_override);
-				buf->text = c0_override;
-				free(c2_override);
-				free(c3_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
-			}
-		}
-		else
-		{
-			char const *const *vowels_marks = vowels[c0];
-			if (vowels_marks[towlower(c4)])
-			{
-				char *c0_override = (char *)calloc(strlen(vowels_marks[towlower(c4)]), sizeof(char));
-				char *c1_override = (char *)calloc(1, sizeof(char));
-				char *c2_override = (char *)calloc(1, sizeof(char));
-				char *c3_override = (char *)calloc(1, sizeof(char));
-				wctomb(c1_override, c1);
-				wctomb(c2_override, c2);
-				wctomb(c3_override, c3);
-				strcat(strcpy(c0_override, vowels_marks[towlower(c4)]), c1_override);
-				strcat(c0_override, c2_override);
-				strcat(c0_override, c3_override);
-				buf->text = c0_override;
-				free(c2_override);
-				free(c3_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
-			}
+			char *c0_override = (char *)calloc(1, sizeof(char));
+			char *c2_override = (char *)calloc(1, sizeof(char));
+			char *c3_override = (char *)calloc(1, sizeof(char));
+			wctomb(c0_override, c0);
+			wctomb(c2_override, c2);
+			wctomb(c3_override, c3);
+			strcat(c0_override, vowels_marks[towlower(c4)]);
+			strcat(c0_override, c2_override);
+			strcat(c0_override, c3_override);
+			buf->text = c0_override;
+			free(c2_override);
+			free(c3_override);
+			buf->len = strlen(buf->text);
+			buf->pos = buf->len;
+			return 1;
 		}
 	}
 	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && is_accents[towlower(c4)])
@@ -691,42 +665,20 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	}
 	else if (vowels[c0] && vowels[c1] && !vowels[c2] && marks[towlower(c3)])
 	{
-		if (is_type1(c0, c1) || is_type2(c0, c1, '\0') || strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0)
+		char const *const *vowels_marks = vowels[c1];
+		if (vowels_marks[towlower(c3)])
 		{
-			char const *const *vowels_marks = vowels[c1];
-			if (vowels_marks[towlower(c3)])
-			{
-				char *c0_override = (char *)calloc(1, sizeof(char));
-				char *c2_override = (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c2_override, c2);
-				strcat(c0_override, vowels_marks[towlower(c3)]);
-				strcat(c0_override, c2_override);
-				buf->text = c0_override;
-				free(c2_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
-			}
-		}
-		else
-		{
-			char const *const *vowels_marks = vowels[c0];
-			if (vowels_marks[towlower(c3)])
-			{
-				char *c0_override = (char *)calloc(strlen(vowels_marks[towlower(c3)]), sizeof(char));
-				char *c1_override = (char *)calloc(1, sizeof(char));
-				char *c2_override = (char *)calloc(1, sizeof(char));
-				wctomb(c1_override, c1);
-				wctomb(c2_override, c2);
-				strcat(strcpy(c0_override, vowels_marks[towlower(c3)]), c1_override);
-				strcat(c0_override, c2_override);
-				buf->text = c0_override;
-				free(c2_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
-			}
+			char *c0_override = (char *)calloc(1, sizeof(char));
+			char *c2_override = (char *)calloc(1, sizeof(char));
+			wctomb(c0_override, c0);
+			wctomb(c2_override, c2);
+			strcat(c0_override, vowels_marks[towlower(c3)]);
+			strcat(c0_override, c2_override);
+			buf->text = c0_override;
+			free(c2_override);
+			buf->len = strlen(buf->text);
+			buf->pos = buf->len;
+			return 1;
 		}
 	}
 	else if (vowels[c0] && vowels[c1] && !vowels[c2] && is_accents[towlower(c3)])
@@ -821,7 +773,16 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	{
 		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
-		if (c0_accents != NULL && c0_accents[towlower(c2)])
+		if (c1_accents != NULL && c1_accents[towlower(c2)])
+		{
+			char *c0_override = (char *)calloc(1, sizeof(char));
+			wctomb(c0_override, c0);
+			buf->text = strcat(c0_override, c1_accents[towlower(c2)]);
+			buf->len = strlen(buf->text);
+			buf->pos = buf->len;
+			return 1;
+		}
+		else if (c0_accents != NULL && c0_accents[towlower(c2)])
 		{
 			char *c1_override = (char *)calloc(1, sizeof(char));
 			wctomb(c1_override, c1);
@@ -831,33 +792,10 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			buf->pos = buf->len;
 			return 1;
 		}
-		else if (c1_accents != NULL && c1_accents[towlower(c2)])
-		{
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			buf->text = strcat(c0_override, c1_accents[towlower(c2)]);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
-			return 1;
-		}
 	}
 	else if (vowels[c0] && vowels[c1] && marks[towlower(c2)])
 	{
-		if (is_type1(c0, '\0') || is_type2(c0, '\0', '\0'))
-		{
-			char const *const *vowels_marks = vowels[c0];
-			if (vowels_marks[towlower(c2)])
-			{
-				char *c1_override = (char *)calloc(1, sizeof(char));
-				wctomb(c1_override, c1);
-				buf->text = strdup(vowels_marks[towlower(c2)]);
-				strcat(buf->text, c1_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
-			}
-		}
-		else if (is_type1(c0, c1) || is_type2(c0, c1, '\0') || strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0)
+		if (strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0)
 		{
 			char const *const *vowels_marks = vowels[c1];
 			if (vowels_marks[towlower(c2)])
