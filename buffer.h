@@ -4,8 +4,7 @@
 #include <stddef.h>
 #include <wchar.h>
 
-struct daklakwl_buffer
-{
+struct daklakwl_buffer {
 	char *text;
 	char *raw;
 	char *pending_text;
