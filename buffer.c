@@ -366,18 +366,22 @@ void daklakwl_buffer_init(struct daklakwl_buffer *buffer)
 	buffer->len = 0;
 	buffer->pos = 0;
 	buffer->gi = calloc(1, 1);
+	buffer->raw = calloc(1, 1);
 }
 
 void daklakwl_buffer_destroy(struct daklakwl_buffer *buffer)
 {
 	free(buffer->text);
 	free(buffer->gi);
+	free(buffer->raw);
 }
 
 void daklakwl_buffer_clear(struct daklakwl_buffer *buffer)
 {
 	buffer->text[0] = '\0';
 	buffer->gi[0] = '\0';
+	buffer->raw[0] = '\0';
+	buffer->catalyst = '\0';
 	buffer->len = 0;
 	buffer->pos = 0;
 }
@@ -417,6 +421,11 @@ void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
 	}
 	buffer->len += text_len;
 	buffer->pos += text_len;
+}
+
+void daklakwl_buffer_raw_append(struct daklakwl_buffer *buffer, char const *text)
+{
+	strcat(buffer->raw, text);
 }
 
 void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer, size_t amt)
@@ -503,7 +512,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	if (wc_len >= 5)
 		c4 = wc_text[4];
 
-	if (vowels[c0] && vowels[c1] && !vowels[c2] && !vowels[c3] && marks[towlower(c4)])
+	if (vowels[c0] && vowels[c1] && !vowels[c2] && !vowels[c3] && marks[towlower(c4)] && wc_len == 5)
 	{
 		char const *const *vowels_marks = vowels[c1];
 		if (vowels_marks[towlower(c4)])
@@ -525,7 +534,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && is_accents[towlower(c4)])
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && is_accents[towlower(c4)] && wc_len == 5)
 	{
 		// TODO: shall we?
 		char const *const *accents = vowels_accents[c1];
@@ -547,7 +556,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && marks[towlower(c4)])
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] && marks[towlower(c4)] && wc_len == 5)
 	{
 		if (is_type2(c0, c1, c2))
 		{
@@ -590,7 +599,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			}
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && vowels[c2] && is_accents[towlower(c3)])
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && is_accents[towlower(c3)] && wc_len == 4)
 	{
 		// TODO: handle uouw and uyee
 		char const *const *c1_accents = vowels_accents[c1];
@@ -624,7 +633,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && vowels[c2] && marks[towlower(c3)])
+	else if (vowels[c0] && vowels[c1] && vowels[c2] && marks[towlower(c3)] && wc_len == 4)
 	{
 		if (is_type2(c0, c1, c2))
 		{
@@ -663,7 +672,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			}
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && !vowels[c2] && marks[towlower(c3)])
+	else if (vowels[c0] && vowels[c1] && !vowels[c2] && marks[towlower(c3)] && wc_len == 4)
 	{
 		char const *const *vowels_marks = vowels[c1];
 		if (vowels_marks[towlower(c3)])
@@ -681,7 +690,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && !vowels[c2] && is_accents[towlower(c3)])
+	else if (vowels[c0] && vowels[c1] && !vowels[c2] && is_accents[towlower(c3)] && wc_len == 4)
 	{
 		char const *const *accents = vowels_accents[c1];
 		if (accents != NULL && accents[towlower(c3)])
@@ -699,7 +708,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && !vowels[c1] && !vowels[c2] && marks[towlower(c3)])
+	else if (vowels[c0] && !vowels[c1] && !vowels[c2] && marks[towlower(c3)] && wc_len == 4)
 	{
 		char const *const *vowels_marks = vowels[c0];
 		if (vowels_marks[towlower(c3)])
@@ -718,7 +727,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && !vowels[c1] && !vowels[c2] && is_accents[towlower(c3)])
+	else if (vowels[c0] && !vowels[c1] && !vowels[c2] && is_accents[towlower(c3)] && wc_len == 4)
 	{
 		char const *const *accents = vowels_accents[c0];
 		if (accents != NULL && accents[towlower(c3)])
@@ -737,7 +746,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && !vowels[c1] && is_accents[towlower(c2)])
+	else if (vowels[c0] && !vowels[c1] && is_accents[towlower(c2)] && wc_len == 3)
 	{
 		char const *const *accents = vowels_accents[c0];
 		if (accents != NULL && accents[towlower(c2)])
@@ -752,7 +761,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && !vowels[c1] && marks[towlower(c2)])
+	else if (vowels[c0] && !vowels[c1] && marks[towlower(c2)] && wc_len == 3)
 	{
 		char const *const *vowels_marks = vowels[c0];
 		if (vowels_marks[towlower(c2)])
@@ -769,7 +778,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && is_accents[towlower(c2)])
+	else if (vowels[c0] && vowels[c1] && is_accents[towlower(c2)] && wc_len == 3)
 	{
 		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
@@ -793,7 +802,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && vowels[c1] && marks[towlower(c2)])
+	else if (vowels[c0] && vowels[c1] && marks[towlower(c2)] && wc_len == 3)
 	{
 		if (strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0)
 		{
@@ -823,7 +832,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			}
 		}
 	}
-	else if (vowels[c0] && is_accents[towlower(c1)])
+	else if (vowels[c0] && is_accents[towlower(c1)] && wc_len == 2)
 	{
 		char const *const *accents = vowels_accents[c0];
 		if (accents != NULL && accents[towlower(c1)])
@@ -834,7 +843,7 @@ int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	}
-	else if (vowels[c0] && marks[towlower(c1)])
+	else if (vowels[c0] && marks[towlower(c1)] && wc_len == 2)
 	{
 		char const *const *vowels_marks = vowels[c0];
 		if (vowels_marks[towlower(c1)])

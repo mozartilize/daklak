@@ -270,8 +270,27 @@ static bool daklakwl_seat_composing_handle_key_event(
 		free(utf8);
 		return false;
 	}
+	daklakwl_buffer_raw_append(&seat->buffer, utf8);
 	daklakwl_buffer_append(&seat->buffer, utf8);
-	daklakwl_buffer_compose(&seat->buffer);
+	int composed = daklakwl_buffer_compose(&seat->buffer);
+	if (composed) {
+		seat->buffer.catalyst = utf8[0];
+	}
+	else {
+		if (seat->buffer.catalyst == utf8[0]) {
+			size_t raw_len = strlen(seat->buffer.raw) - 1;
+			free(seat->buffer.text);
+			char *temp_raw = seat->buffer.raw;
+			seat->buffer.text = calloc(raw_len, 1);
+			strncpy(seat->buffer.text, temp_raw, raw_len);
+			seat->buffer.raw = calloc(raw_len, 1);
+			strncpy(seat->buffer.raw, temp_raw, raw_len);
+			free(temp_raw);
+			seat->buffer.len = raw_len;
+			seat->buffer.pos = raw_len;
+		}
+		seat->buffer.catalyst = '\0';
+	}
 	daklakwl_seat_composing_update(seat);
 	free(utf8);
 	return true;
