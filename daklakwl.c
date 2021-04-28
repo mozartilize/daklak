@@ -109,7 +109,7 @@ static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat);
 static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer);
 
 static void daklakwl_seat_init(struct daklakwl_seat *seat,
-		struct daklakwl_state *state, struct wl_seat *wl_seat)
+							   struct daklakwl_state *state, struct wl_seat *wl_seat)
 {
 	seat->state = state;
 	seat->wl_seat = wl_seat;
@@ -132,7 +132,7 @@ static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
 		zwp_input_method_manager_v2_get_input_method(
 			seat->state->zwp_input_method_manager_v2, seat->wl_seat);
 	zwp_input_method_v2_add_listener(seat->zwp_input_method_v2,
-		&zwp_input_method_v2_listener, seat);
+									 &zwp_input_method_v2_listener, seat);
 	seat->zwp_virtual_keyboard_v1 =
 		zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(
 			seat->state->zwp_virtual_keyboard_manager_v1, seat->wl_seat);
@@ -208,7 +208,8 @@ static bool daklakwl_seat_composing_handle_key_event(
 	case XKB_KEY_Left:
 		if (seat->buffer.len == 0)
 			return false;
-		if (seat->buffer.pos == 0) {
+		if (seat->buffer.pos == 0)
+		{
 			daklakwl_seat_composing_commit(seat);
 			return false;
 		}
@@ -218,7 +219,8 @@ static bool daklakwl_seat_composing_handle_key_event(
 	case XKB_KEY_Right:
 		if (seat->buffer.len == 0)
 			return false;
-		if (seat->buffer.pos == seat->buffer.len) {
+		if (seat->buffer.pos == seat->buffer.len)
+		{
 			daklakwl_seat_composing_commit(seat);
 			return false;
 		}
@@ -255,42 +257,15 @@ static bool daklakwl_seat_composing_handle_key_event(
 	char *utf8 = malloc(utf8_len + 1);
 	xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
 
-	if (seat->buffer.len == 0 && seat->buffer.gi[0] == '\0' && (utf8[0] == 'g' || utf8[0] == 'q' || utf8[0] == 'd')) {
-		seat->buffer.gi = strcat(seat->buffer.gi, utf8);
-	}
-	else if (strlen(seat->buffer.gi) == 1 && (seat->buffer.gi[0] == 'g' || seat->buffer.gi[0] == 'q')) {
-		if (utf8[0] == 'i' || utf8[0] == 'u') {
-			strcat(seat->buffer.gi, utf8);
-		} else if (seat->buffer.len == 0) {
-			seat->buffer.gi[0] = '\0';
-		}
-	}
-
-	if (daklakwl_buffer_should_not_append(&seat->buffer, utf8)) {
+	daklakwl_buffer_gi_append(&seat->buffer, utf8);
+	if (daklakwl_buffer_should_not_append(&seat->buffer, utf8))
+	{
 		free(utf8);
 		return false;
 	}
 	daklakwl_buffer_raw_append(&seat->buffer, utf8);
 	daklakwl_buffer_append(&seat->buffer, utf8);
-	int composed = daklakwl_buffer_compose(&seat->buffer);
-	if (composed) {
-		seat->buffer.catalyst = utf8[0];
-	}
-	else {
-		if (seat->buffer.catalyst == utf8[0]) {
-			size_t raw_len = strlen(seat->buffer.raw) - 1;
-			free(seat->buffer.text);
-			char *temp_raw = seat->buffer.raw;
-			seat->buffer.text = calloc(raw_len, 1);
-			strncpy(seat->buffer.text, temp_raw, raw_len);
-			seat->buffer.raw = calloc(raw_len, 1);
-			strncpy(seat->buffer.raw, temp_raw, raw_len);
-			free(temp_raw);
-			seat->buffer.len = raw_len;
-			seat->buffer.pos = raw_len;
-		}
-		seat->buffer.catalyst = '\0';
-	}
+	daklakwl_buffer_compose(&seat->buffer);
 	daklakwl_seat_composing_update(seat);
 	free(utf8);
 	return true;
@@ -342,8 +317,8 @@ static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer)
 }
 
 static void zwp_input_method_keyboard_grab_v2_keymap(void *data,
-		struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
-		uint32_t format, int32_t fd, uint32_t size)
+													 struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
+													 uint32_t format, int32_t fd, uint32_t size)
 {
 	struct daklakwl_seat *seat = data;
 	char *map = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -354,7 +329,7 @@ static void zwp_input_method_keyboard_grab_v2_keymap(void *data,
 		xkb_keymap_unref(seat->xkb_keymap);
 		xkb_state_unref(seat->xkb_state);
 		seat->xkb_keymap = xkb_keymap_new_from_string(seat->xkb_context, map,
-			XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+													  XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
 		seat->xkb_state = xkb_state_new(seat->xkb_keymap);
 		free(seat->xkb_keymap_string);
 		seat->xkb_keymap_string = strdup(map);
@@ -364,8 +339,8 @@ static void zwp_input_method_keyboard_grab_v2_keymap(void *data,
 }
 
 static void zwp_input_method_keyboard_grab_v2_key(void *data,
-		struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
-		uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
+												  struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
+												  uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
 {
 	struct daklakwl_seat *seat = data;
 	xkb_keycode_t keycode = key + 8;
@@ -418,7 +393,7 @@ static void zwp_input_method_keyboard_grab_v2_key(void *data,
 	if (state == WL_KEYBOARD_KEY_STATE_PRESSED && handled)
 	{
 		for (size_t i = 0;
-			i < sizeof seat->pressed / sizeof seat->pressed[0]; i++)
+			 i < sizeof seat->pressed / sizeof seat->pressed[0]; i++)
 		{
 			if (seat->pressed[i] == 0)
 			{
@@ -431,7 +406,7 @@ static void zwp_input_method_keyboard_grab_v2_key(void *data,
 	if (state == WL_KEYBOARD_KEY_STATE_RELEASED)
 	{
 		for (size_t i = 0;
-			i < sizeof seat->pressed / sizeof seat->pressed[0]; i++)
+			 i < sizeof seat->pressed / sizeof seat->pressed[0]; i++)
 		{
 			if (seat->pressed[i] == keycode)
 			{
@@ -450,21 +425,21 @@ forward:
 }
 
 static void zwp_input_method_keyboard_grab_v2_modifiers(void *data,
-		struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
-		uint32_t serial,
-		uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked,
-		uint32_t group)
+														struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
+														uint32_t serial,
+														uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked,
+														uint32_t group)
 {
 	struct daklakwl_seat *seat = data;
 	xkb_state_update_mask(seat->xkb_state,
-		mods_depressed, mods_latched, mods_locked, 0, 0, group);
+						  mods_depressed, mods_latched, mods_locked, 0, 0, group);
 	zwp_virtual_keyboard_v1_modifiers(seat->zwp_virtual_keyboard_v1,
-		mods_depressed, mods_latched, mods_locked, group);
+									  mods_depressed, mods_latched, mods_locked, group);
 }
 
 static void zwp_input_method_keyboard_grab_v2_repeat_info(void *data,
-		struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
-		int32_t rate, int32_t delay)
+														  struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
+														  int32_t rate, int32_t delay)
 {
 	struct daklakwl_seat *seat = data;
 	seat->repeat_rate = rate;
@@ -572,7 +547,7 @@ static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t c
 }
 
 static void wl_seat_name(void *data, struct wl_seat *wl_seat,
-		char const *name)
+						 char const *name)
 {
 	struct daklakwl_seat *seat = data;
 	free(seat->name);
@@ -651,15 +626,14 @@ static struct daklakwl_global const globals[] = {
 };
 
 static void wl_registry_global(void *data, struct wl_registry *wl_registry,
-		uint32_t name, char const *interface, uint32_t version)
+							   uint32_t name, char const *interface, uint32_t version)
 {
 	struct daklakwl_global global = {.name = interface};
 	struct daklakwl_global *found = bsearch(
 		&global,
 		globals,
 		sizeof globals / sizeof(struct daklakwl_global),
-		sizeof(struct daklakwl_global), daklakwl_global_compare
-	);
+		sizeof(struct daklakwl_global), daklakwl_global_compare);
 
 	if (found == NULL)
 		return;
@@ -672,7 +646,7 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
 	else
 	{
 		found->callback(data, wl_registry_bind(
-			wl_registry, name, found->interface, found->version));
+								  wl_registry, name, found->interface, found->version));
 	}
 }
 
@@ -760,8 +734,8 @@ static void daklakwl_state_run_timers(struct daklakwl_state *state)
 	wl_list_for_each_safe(timer, tmp, &state->timers, link)
 	{
 		bool expired = timer->time.tv_sec < now.tv_sec ||
-			(timer->time.tv_sec == now.tv_sec &&
-				timer->time.tv_nsec < now.tv_nsec);
+					   (timer->time.tv_sec == now.tv_sec &&
+						timer->time.tv_nsec < now.tv_nsec);
 		if (expired)
 			timer->callback(timer);
 	}
