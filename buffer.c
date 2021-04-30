@@ -317,8 +317,11 @@ void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer,
 		return;
 	size_t end = buffer->pos;
 	size_t start = buffer->pos;
+	size_t raw_end = buffer->pos;
+	size_t raw_start = buffer->pos;
 	for (size_t i = 0; i < amt; i++) {
 		start -= 1;
+		raw_start -= 1;
 		for (; start != 0; start--) {
 			if ((buffer->text[start] & 0x80) == 0 ||
 			    (buffer->text[start] & 0xC0) == 0xC0) {
@@ -326,10 +329,40 @@ void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer,
 			}
 		}
 	}
+	size_t raw_len = strlen(buffer->raw);
+	for (; raw_start != 0; raw_start--) {
+		if (buffer->raw[raw_start] == buffer->text[start] ||
+		    buffer->raw[raw_start - 1] == buffer->text[start - 1])
+			break;
+	}
+	for (; raw_end != 0; raw_end--) {
+		if (buffer->raw[raw_end] == buffer->text[end] &&
+		    buffer->raw[raw_end - 1] == buffer->text[end - 1])
+			break;
+		if (buffer->text[raw_end] &&
+		    (buffer->raw[raw_end] == buffer->text[end] ||
+		     buffer->raw[raw_end - 1] == buffer->text[end - 1]))
+			break;
+	}
+	if (raw_end == 0) {
+		raw_end = end;
+		buffer->catalyst = '\0';
+	}
+	size_t i = end - start - (raw_end - raw_start);
+	size_t match_last_char_pos = raw_len;
+	for (; i != 0; i--, match_last_char_pos--) {
+		if (buffer->raw[match_last_char_pos - 1] ==
+		    buffer->text[buffer->len - 1])
+			break;
+		buffer->catalyst = '\0';
+	}
+	memmove(buffer->raw + match_last_char_pos, buffer->raw + raw_len, 1);
 	memmove(buffer->text + start, buffer->text + end,
 		buffer->len - end + 1);
 	buffer->len -= end - start;
 	buffer->pos -= end - start;
+	memmove(buffer->raw + raw_start, buffer->raw + raw_end,
+		raw_len - raw_end + 1);
 }
 
 void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *buffer, size_t amt)
