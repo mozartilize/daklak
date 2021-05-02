@@ -104,7 +104,7 @@ static char const *const vowel_upper_y_marks[] = {
     ['s'] = "Ý", ['f'] = "Ỳ", ['x'] = "Ỹ", ['r'] = "Ỷ", ['j'] = "Ỵ",
 };
 
-static char const *const *const vowels[7929] = {
+static char const *const *const vowels_marks[] = {
     [L'a'] = vowel_a_marks,	   [L'ă'] = vowel_aw_marks,
     [L'â'] = vowel_aa_marks,	   [L'e'] = vowel_e_marks,
     [L'ê'] = vowel_ee_marks,	   [L'i'] = vowel_i_marks,
@@ -131,8 +131,53 @@ static char const *const vowel_a_accents[] = {
     [L'w'] = "ă",
 };
 
+static char const *const vowel_as_accents[] = {
+    [L'a'] = "ấ",
+    [L'w'] = "ắ",
+};
+
+static char const *const vowel_af_accents[] = {
+    [L'a'] = "ầ",
+    [L'w'] = "ằ",
+};
+
+static char const *const vowel_ar_accents[] = {
+    [L'a'] = "ẩ",
+    [L'w'] = "ẳ",
+};
+
+static char const *const vowel_ax_accents[] = {
+    [L'a'] = "ẫ",
+    [L'w'] = "ẵ",
+};
+
+static char const *const vowel_aj_accents[] = {
+    [L'a'] = "ậ",
+    [L'w'] = "ặ",
+};
+
 static char const *const vowel_e_accents[] = {
     [L'e'] = "ê",
+};
+
+static char const *const vowel_es_accents[] = {
+    [L'e'] = "ế",
+};
+
+static char const *const vowel_ef_accents[] = {
+    [L'e'] = "ề",
+};
+
+static char const *const vowel_er_accents[] = {
+    [L'e'] = "ể",
+};
+
+static char const *const vowel_ex_accents[] = {
+    [L'e'] = "ễ",
+};
+
+static char const *const vowel_ej_accents[] = {
+    [L'e'] = "ệ",
 };
 
 static char const *const vowel_o_accents[] = {
@@ -140,8 +185,53 @@ static char const *const vowel_o_accents[] = {
     [L'w'] = "ơ",
 };
 
+static char const *const vowel_os_accents[] = {
+    [L'o'] = "ố",
+    [L'w'] = "ớ",
+};
+
+static char const *const vowel_of_accents[] = {
+    [L'o'] = "ồ",
+    [L'w'] = "ờ",
+};
+
+static char const *const vowel_or_accents[] = {
+    [L'o'] = "ổ",
+    [L'w'] = "ở",
+};
+
+static char const *const vowel_ox_accents[] = {
+    [L'o'] = "ỗ",
+    [L'w'] = "ợ",
+};
+
+static char const *const vowel_oj_accents[] = {
+    [L'o'] = "ộ",
+    [L'w'] = "ợ",
+};
+
 static char const *const vowel_u_accents[] = {
     [L'w'] = "ư",
+};
+
+static char const *const vowel_us_accents[] = {
+    [L'w'] = "ứ",
+};
+
+static char const *const vowel_uf_accents[] = {
+    [L'w'] = "ừ",
+};
+
+static char const *const vowel_ur_accents[] = {
+    [L'w'] = "ử",
+};
+
+static char const *const vowel_ux_accents[] = {
+    [L'w'] = "ữ",
+};
+
+static char const *const vowel_uj_accents[] = {
+    [L'w'] = "ự",
 };
 
 static char const *const vowel_upper_a_accents[] = {
@@ -149,8 +239,53 @@ static char const *const vowel_upper_a_accents[] = {
     [L'w'] = "Ă",
 };
 
+static char const *const vowel_upper_as_accents[] = {
+    [L'a'] = "Ấ",
+    [L'w'] = "Ắ",
+};
+
+static char const *const vowel_upper_af_accents[] = {
+    [L'a'] = "Ầ",
+    [L'w'] = "Ằ",
+};
+
+static char const *const vowel_upper_ar_accents[] = {
+    [L'a'] = "Ẩ",
+    [L'w'] = "Ẳ",
+};
+
+static char const *const vowel_upper_ax_accents[] = {
+    [L'a'] = "Ẫ",
+    [L'w'] = "Ẵ",
+};
+
+static char const *const vowel_upper_aj_accents[] = {
+    [L'a'] = "Ậ",
+    [L'w'] = "Ặ",
+};
+
 static char const *const vowel_upper_e_accents[] = {
     [L'e'] = "Ê",
+};
+
+static char const *const vowel_upper_es_accents[] = {
+    [L'e'] = "Ế",
+};
+
+static char const *const vowel_upper_ef_accents[] = {
+    [L'e'] = "Ề",
+};
+
+static char const *const vowel_upper_er_accents[] = {
+    [L'e'] = "Ể",
+};
+
+static char const *const vowel_upper_ex_accents[] = {
+    [L'e'] = "Ễ",
+};
+
+static char const *const vowel_upper_ej_accents[] = {
+    [L'e'] = "Ệ",
 };
 
 static char const *const vowel_upper_o_accents[] = {
@@ -158,19 +293,80 @@ static char const *const vowel_upper_o_accents[] = {
     [L'w'] = "Ơ",
 };
 
+static char const *const vowel_upper_os_accents[] = {
+    [L'o'] = "Ố",
+    [L'w'] = "Ớ",
+};
+
+static char const *const vowel_upper_of_accents[] = {
+    [L'o'] = "Ồ",
+    [L'w'] = "Ờ",
+};
+
+static char const *const vowel_upper_or_accents[] = {
+    [L'o'] = "Ổ",
+    [L'w'] = "Ở",
+};
+
+static char const *const vowel_upper_ox_accents[] = {
+    [L'o'] = "Ỗ",
+    [L'w'] = "Ợ",
+};
+
+static char const *const vowel_upper_oj_accents[] = {
+    [L'o'] = "Ộ",
+    [L'w'] = "Ợ",
+};
+
 static char const *const vowel_upper_u_accents[] = {
     [L'w'] = "Ư",
 };
 
-static char const *const *const vowels_accents[7929] = {
-    [L'a'] = vowel_a_accents,	    [L'e'] = vowel_e_accents,
-    [L'o'] = vowel_o_accents,	    [L'u'] = vowel_u_accents,
-    [L'A'] = vowel_upper_a_accents, [L'E'] = vowel_upper_e_accents,
-    [L'O'] = vowel_upper_o_accents, [L'U'] = vowel_upper_u_accents,
+static char const *const vowel_upper_us_accents[] = {
+    [L'w'] = "Ứ",
 };
 
-static int const marks[128] = {
-    [L's'] = 1, [L'f'] = 1, [L'x'] = 1, [L'r'] = 1, [L'j'] = 1,
+static char const *const vowel_upper_uf_accents[] = {
+    [L'w'] = "Ừ",
+};
+
+static char const *const vowel_upper_ur_accents[] = {
+    [L'w'] = "Ử",
+};
+
+static char const *const vowel_upper_ux_accents[] = {
+    [L'w'] = "Ữ",
+};
+
+static char const *const vowel_upper_uj_accents[] = {
+    [L'w'] = "Ự",
+};
+
+static char const *const *const vowels_accents[] = {
+    [L'a'] = vowel_a_accents,	     [L'e'] = vowel_e_accents,
+    [L'o'] = vowel_o_accents,	     [L'u'] = vowel_u_accents,
+    [L'á'] = vowel_as_accents,	     [L'é'] = vowel_es_accents,
+    [L'ó'] = vowel_os_accents,	     [L'ú'] = vowel_us_accents,
+    [L'à'] = vowel_af_accents,	     [L'è'] = vowel_ef_accents,
+    [L'ò'] = vowel_of_accents,	     [L'ù'] = vowel_uf_accents,
+    [L'ả'] = vowel_ar_accents,	     [L'ẻ'] = vowel_er_accents,
+    [L'ỏ'] = vowel_or_accents,	     [L'ủ'] = vowel_ur_accents,
+    [L'ã'] = vowel_ax_accents,	     [L'ẽ'] = vowel_ex_accents,
+    [L'õ'] = vowel_ox_accents,	     [L'ũ'] = vowel_ux_accents,
+    [L'ạ'] = vowel_aj_accents,	     [L'ẹ'] = vowel_ej_accents,
+    [L'ọ'] = vowel_oj_accents,	     [L'ụ'] = vowel_uj_accents,
+    [L'A'] = vowel_upper_a_accents,  [L'E'] = vowel_upper_e_accents,
+    [L'O'] = vowel_upper_o_accents,  [L'U'] = vowel_upper_u_accents,
+    [L'Á'] = vowel_upper_as_accents, [L'É'] = vowel_upper_es_accents,
+    [L'Ó'] = vowel_upper_os_accents, [L'Ú'] = vowel_upper_us_accents,
+    [L'À'] = vowel_upper_af_accents, [L'È'] = vowel_upper_ef_accents,
+    [L'Ò'] = vowel_upper_of_accents, [L'Ù'] = vowel_upper_uf_accents,
+    [L'Ả'] = vowel_upper_ar_accents, [L'Ẻ'] = vowel_upper_er_accents,
+    [L'Ỏ'] = vowel_upper_or_accents, [L'Ủ'] = vowel_upper_ur_accents,
+    [L'Ã'] = vowel_upper_ax_accents, [L'Ẽ'] = vowel_upper_ex_accents,
+    [L'Õ'] = vowel_upper_ox_accents, [L'Ũ'] = vowel_upper_ux_accents,
+    [L'Ạ'] = vowel_upper_aj_accents, [L'Ẹ'] = vowel_upper_ej_accents,
+    [L'Ọ'] = vowel_upper_oj_accents, [L'Ụ'] = vowel_upper_uj_accents,
 };
 
 static int const type1_c0[7929] = {
@@ -231,7 +427,25 @@ static int is_mark(char c)
 	}
 }
 
-static int is_vowel(char c) { return vowels[(int)c] ? 1 : 0; }
+static int is_vowel(wchar_t c)
+{
+	static int const vowels[7929] = {
+	    [L'a'] = 1, [L'ă'] = 1, [L'â'] = 1, [L'e'] = 1, [L'ê'] = 1,
+	    [L'i'] = 1, [L'o'] = 1, [L'ô'] = 1, [L'ơ'] = 1, [L'u'] = 1,
+	    [L'ư'] = 1, [L'y'] = 1, [L'A'] = 1, [L'Ă'] = 1, [L'Â'] = 1,
+	    [L'E'] = 1, [L'Ê'] = 1, [L'I'] = 1, [L'O'] = 1, [L'Ô'] = 1,
+	    [L'Ơ'] = 1, [L'U'] = 1, [L'Ư'] = 1, [L'Y'] = 1, [L'á'] = 1,
+	    [L'é'] = 1, [L'ó'] = 1, [L'ú'] = 1, [L'à'] = 1, [L'è'] = 1,
+	    [L'ò'] = 1, [L'ù'] = 1, [L'ả'] = 1, [L'ẻ'] = 1, [L'ỏ'] = 1,
+	    [L'ủ'] = 1, [L'ã'] = 1, [L'ẽ'] = 1, [L'õ'] = 1, [L'ũ'] = 1,
+	    [L'ạ'] = 1, [L'ẹ'] = 1, [L'ọ'] = 1, [L'ụ'] = 1, [L'Á'] = 1,
+	    [L'É'] = 1, [L'Ó'] = 1, [L'Ú'] = 1, [L'À'] = 1, [L'È'] = 1,
+	    [L'Ò'] = 1, [L'Ù'] = 1, [L'Ả'] = 1, [L'Ẻ'] = 1, [L'Ỏ'] = 1,
+	    [L'Ủ'] = 1, [L'Ã'] = 1, [L'Ẽ'] = 1, [L'Õ'] = 1, [L'Ũ'] = 1,
+	    [L'Ạ'] = 1, [L'Ẹ'] = 1, [L'Ọ'] = 1, [L'Ụ'] = 1,
+	};
+	return vowels[(int)c] ? 1 : 0;
+}
 
 size_t mbslen(const char *s)
 {
@@ -411,332 +625,242 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	wchar_t *wc_text = mbsrdup(buf->text);
 	size_t wc_len = mbslen(buf->text);
 	wchar_t c0 = '\0', c1 = '\0', c2 = '\0', c3 = '\0', c4 = '\0';
+	size_t wc_pos = wc_len;
+	for (size_t start = buf->len; wc_pos > 0; wc_pos--, start--) {
+		for (; start > 0; start--) {
+			if (wc_text[wc_pos] == buf->text[start] ||
+			    wc_text[wc_pos - 1] == buf->text[start - 1]) {
+				break;
+			}
+		}
+		if (start == buf->pos)
+			break;
+	}
+
 	c0 = wc_text[0];
-	if (wc_len >= 2)
+	if (wc_pos >= 2)
 		c1 = wc_text[1];
-	if (wc_len >= 3)
+	if (wc_pos >= 3)
 		c2 = wc_text[2];
-	if (wc_len >= 4)
+	if (wc_pos >= 4)
 		c3 = wc_text[3];
-	if (wc_len >= 5)
+	if (wc_pos >= 5)
 		c4 = wc_text[4];
 
-	if (vowels[c0] && vowels[c1] && !vowels[c2] && !vowels[c3] &&
-	    marks[towlower(c4)] && wc_len == 5) {
-		char const *const *vowels_marks = vowels[c1];
-		if (vowels_marks[towlower(c4)]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			char *c3_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			wctomb(c2_override, c2);
-			wctomb(c3_override, c3);
-			strcat(c0_override, vowels_marks[towlower(c4)]);
-			strcat(c0_override, c2_override);
-			strcat(c0_override, c3_override);
-			buf->text = c0_override;
-			free(c2_override);
-			free(c3_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+	if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) && !is_vowel(c3) &&
+	    is_mark(towlower(c4)) && wc_pos == 5) {
+		char const *const *marks = vowels_marks[c1];
+		if (marks && marks && marks[towlower(c4)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, marks[towlower(c4)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] &&
-		   is_accents[towlower(c4)] && wc_len == 5) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
+		   !is_vowel(c3) && is_accents[towlower(c4)] && wc_pos == 5) {
 		// TODO: shall we?
 		char const *const *accents = vowels_accents[c1];
-		if (accents != NULL && accents[towlower(c4)]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			char *c3_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			wctomb(c2_override, c2);
-			wctomb(c3_override, c3);
-			strcat(c0_override, accents[towlower(c4)]);
-			strcat(c0_override, c2_override);
-			strcat(c0_override, c3_override);
-			free(c2_override);
-			buf->text = c0_override;
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (accents && accents[towlower(c4)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, accents[towlower(c4)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && vowels[c2] && !vowels[c3] &&
-		   marks[towlower(c4)] && wc_len == 5) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
+		   !is_vowel(c3) && is_mark(towlower(c4)) && wc_pos == 5) {
 		if (is_type2(c0, c1, c2)) {
-			char const *const *vowels_marks = vowels[c2];
-			if (vowels_marks[towlower(c4)]) {
-				char *c0_override =
-				    (char *)calloc(1, sizeof(char));
-				char *c1_override =
-				    (char *)calloc(1, sizeof(char));
-				char *c3_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c1_override, c1);
-				wctomb(c3_override, c3);
-				strcat(c0_override, c1_override);
-				strcat(c0_override, vowels_marks[towlower(c4)]);
-				strcat(c0_override, c3_override);
-				free(c1_override);
-				free(c3_override);
-				buf->text = c0_override;
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
-				return 1;
+			char const *const *marks = vowels_marks[c2];
+			if (marks && marks[towlower(c4)]) {
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_move_left(buf);
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c4)]);
+				daklakwl_buffer_move_right(buf);
 			}
 		} else {
-			char const *const *vowels_marks = vowels[c1];
-			if (vowels_marks[towlower(c4)]) {
-				char *c0_override =
-				    (char *)calloc(1, sizeof(char));
-				char *c2_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c2_override, c2);
-				strcat(c0_override, vowels_marks[towlower(c3)]);
-				strcat(c0_override, c2_override);
-				free(c2_override);
-				buf->text = c0_override;
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
+			char const *const *marks = vowels_marks[c1];
+			if (marks && marks[towlower(c4)]) {
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_move_left(buf);
+				daklakwl_buffer_move_left(buf);
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c4)]);
+				daklakwl_buffer_move_right(buf);
+				daklakwl_buffer_move_right(buf);
 				return 1;
 			}
 		}
-	} else if (vowels[c0] && vowels[c1] && vowels[c2] &&
-		   is_accents[towlower(c3)] && wc_len == 4) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
+		   is_accents[towlower(c3)] && wc_pos == 4) {
 		// TODO: handle uouw and uyee
 		char const *const *c1_accents = vowels_accents[c1];
 		char const *const *c2_accents = vowels_accents[c2];
 		if (c1_accents && c1_accents[c3]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			wctomb(c2_override, c2);
-			strcat(c0_override, c1_accents[c3]);
-			strcat(c0_override, c2_override);
-			free(c2_override);
-			buf->text = c0_override;
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c1_accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		} else if (c2_accents && c2_accents[c3]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			wctomb(c1_override, c1);
-			strcat(c0_override, c1_override);
-			strcat(c0_override, c2_accents[c3]);
-			free(c1_override);
-			buf->text = c0_override;
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, c2_accents[towlower(c3)]);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && vowels[c2] &&
-		   marks[towlower(c3)] && wc_len == 4) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
+		   is_mark(towlower(c3)) && wc_pos == 4) {
 		if (is_type2(c0, c1, c2)) {
-			char const *const *vowels_marks = vowels[c2];
-			if (vowels_marks[towlower(c3)]) {
-				char *c0_override =
-				    (char *)calloc(1, sizeof(char));
-				char *c1_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c1_override, c1);
-				strcat(c0_override, c1_override);
-				strcat(c0_override, vowels_marks[towlower(c3)]);
-				free(c1_override);
-				buf->text = c0_override;
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
+			char const *const *marks = vowels_marks[c2];
+			if (marks && marks[towlower(c3)]) {
+				daklakwl_buffer_delete_backwards(buf, 2);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c3)]);
 				return 1;
 			}
 		} else {
-			char const *const *vowels_marks = vowels[c1];
-			if (vowels_marks[towlower(c3)]) {
-				char *c0_override =
-				    (char *)calloc(1, sizeof(char));
-				char *c2_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				wctomb(c2_override, c2);
-				strcat(c0_override, vowels_marks[towlower(c3)]);
-				strcat(c0_override, c2_override);
-				free(c2_override);
-				buf->text = c0_override;
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
+			char const *const *marks = vowels_marks[c1];
+			if (marks && marks[towlower(c3)]) {
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_move_left(buf);
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c3)]);
+				daklakwl_buffer_move_right(buf);
 				return 1;
 			}
 		}
-	} else if (vowels[c0] && vowels[c1] && !vowels[c2] &&
-		   marks[towlower(c3)] && wc_len == 4) {
-		char const *const *vowels_marks = vowels[c1];
-		if (vowels_marks[towlower(c3)]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			wctomb(c2_override, c2);
-			strcat(c0_override, vowels_marks[towlower(c3)]);
-			strcat(c0_override, c2_override);
-			buf->text = c0_override;
-			free(c2_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+	} else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) &&
+		   is_mark(towlower(c3)) && wc_pos == 4) {
+		char const *const *marks = vowels_marks[c1];
+		if (marks && marks[towlower(c3)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, marks[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && !vowels[c2] &&
-		   is_accents[towlower(c3)] && wc_len == 4) {
+	} else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) &&
+		   is_accents[towlower(c3)] && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c1];
-		if (accents != NULL && accents[towlower(c3)]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			wctomb(c2_override, c2);
-			strcat(c0_override, accents[towlower(c3)]);
-			strcat(c0_override, c2_override);
-			buf->text = (char *)c0_override;
-			free(c2_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (accents && accents[towlower(c3)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && !vowels[c1] && !vowels[c2] &&
-		   marks[towlower(c3)] && wc_len == 4) {
-		char const *const *vowels_marks = vowels[c0];
-		if (vowels_marks[towlower(c3)]) {
-			buf->text = strdup(vowels_marks[towlower(c3)]);
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c1_override, c1);
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			wctomb(c2_override, c2);
-			strcat(buf->text, c1_override);
-			strcat(buf->text, c2_override);
-			free(c1_override);
-			free(c2_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+	} else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2) &&
+		   is_mark(towlower(c3)) && wc_pos == 4) {
+		char const *const *marks = vowels_marks[c0];
+		if (marks && marks[towlower(c3)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, marks[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && !vowels[c1] && !vowels[c2] &&
-		   is_accents[towlower(c3)] && wc_len == 4) {
+	} else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2) &&
+		   is_accents[towlower(c3)] && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c0];
-		if (accents != NULL && accents[towlower(c3)]) {
-			buf->text = strdup(accents[towlower(c3)]);
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c1_override, c1);
-			char *c2_override = (char *)calloc(1, sizeof(char));
-			wctomb(c2_override, c2);
-			strcat(buf->text, c1_override);
-			strcat(buf->text, c2_override);
-			free(c1_override);
-			free(c2_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (accents && accents[towlower(c3)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && !vowels[c1] && is_accents[towlower(c2)] &&
-		   wc_len == 3) {
+	} else if (is_vowel(c0) && !is_vowel(c1) && is_accents[towlower(c2)] &&
+		   wc_pos == 3) {
 		char const *const *accents = vowels_accents[c0];
-		if (accents != NULL && accents[towlower(c2)]) {
-			char *c0_override = (char *)calloc(
-			    strlen(accents[towlower(c2)]), sizeof(char));
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c1_override, c1);
-			buf->text =
-			    strcat(strcpy(c0_override, accents[towlower(c2)]),
-				   c1_override);
-			free(c1_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (accents && accents[towlower(c2)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, accents[towlower(c2)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && !vowels[c1] && marks[towlower(c2)] &&
-		   wc_len == 3) {
-		char const *const *vowels_marks = vowels[c0];
-		if (vowels_marks[towlower(c2)]) {
-			char *c0_override = (char *)calloc(
-			    strlen(vowels_marks[towlower(c2)]), sizeof(char));
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c1_override, c1);
-			buf->text = strcat(
-			    strcpy(c0_override, vowels_marks[towlower(c2)]),
-			    c1_override);
-			free(c1_override);
-			// buf->mark_pos = 1
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
-			// buf->mark = c2
+	} else if (is_vowel(c0) && !is_vowel(c1) && is_mark(towlower(c2)) &&
+		   wc_pos == 3) {
+		char const *const *marks = vowels_marks[c0];
+		if (marks && marks[towlower(c2)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, marks[towlower(c2)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && is_accents[towlower(c2)] &&
-		   wc_len == 3) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_accents[towlower(c2)] &&
+		   wc_pos == 3) {
 		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
-		if (c1_accents != NULL && c1_accents[towlower(c2)]) {
-			char *c0_override = (char *)calloc(1, sizeof(char));
-			wctomb(c0_override, c0);
-			buf->text =
-			    strcat(c0_override, c1_accents[towlower(c2)]);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (c1_accents && c1_accents[towlower(c2)]) {
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, c1_accents[towlower(c2)]);
 			return 1;
-		} else if (c0_accents != NULL && c0_accents[towlower(c2)]) {
-			char *c1_override = (char *)calloc(1, sizeof(char));
-			wctomb(c1_override, c1);
-			buf->text = strdup(c0_accents[towlower(c2)]);
-			strcat(buf->text, c1_override);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		} else if (c0_accents && c0_accents[towlower(c2)]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c0_accents[towlower(c2)]);
+			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (vowels[c0] && vowels[c1] && marks[towlower(c2)] &&
-		   wc_len == 3) {
+	} else if (is_vowel(c0) && is_vowel(c1) && is_mark(towlower(c2)) &&
+		   wc_pos == 3) {
 		if (strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0) {
-			char const *const *vowels_marks = vowels[c1];
-			if (vowels_marks[towlower(c2)]) {
-				char *c0_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c0_override, c0);
-				buf->text = strcat(c0_override,
-						   vowels_marks[towlower(c2)]);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
+			char const *const *marks = vowels_marks[c1];
+			if (marks && marks[towlower(c2)]) {
+				daklakwl_buffer_delete_backwards(buf, 2);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c2)]);
 				return 1;
 			}
 		} else {
-			char const *const *vowels_marks = vowels[c0];
-			if (vowels_marks[towlower(c2)]) {
-				char *c0_override = (char *)calloc(
-				    strlen(vowels_marks[towlower(c2)]),
-				    sizeof(char));
-				char *c1_override =
-				    (char *)calloc(1, sizeof(char));
-				wctomb(c1_override, c1);
-				buf->text =
-				    strcat(strcpy(c0_override,
-						  vowels_marks[towlower(c2)]),
-					   c1_override);
-				buf->len = strlen(buf->text);
-				buf->pos = buf->len;
+			char const *const *marks = vowels_marks[c0];
+			if (marks && marks[towlower(c2)]) {
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_move_left(buf);
+				daklakwl_buffer_delete_backwards(buf, 1);
+				daklakwl_buffer_append(buf,
+						       marks[towlower(c2)]);
+				daklakwl_buffer_move_right(buf);
 				return 1;
 			}
 		}
-	} else if (vowels[c0] && is_accents[towlower(c1)] && wc_len == 2) {
+	} else if (is_vowel(c0) && is_accents[towlower(c1)] && wc_pos == 2) {
 		char const *const *accents = vowels_accents[c0];
-		if (accents != NULL && accents[towlower(c1)]) {
-			buf->text = strdup(accents[towlower(c1)]);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+		if (accents && accents[towlower(c1)]) {
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, accents[towlower(c1)]);
 			return 1;
 		}
-	} else if (vowels[c0] && marks[towlower(c1)] && wc_len == 2) {
-		char const *const *vowels_marks = vowels[c0];
-		if (vowels_marks[towlower(c1)]) {
-			buf->text = strdup(vowels_marks[towlower(c1)]);
-			buf->len = strlen(buf->text);
-			buf->pos = buf->len;
+	} else if (is_vowel(c0) && is_mark(towlower(c1)) && wc_pos == 2) {
+		char const *const *marks = vowels_marks[c0];
+		if (marks && marks[towlower(c1)]) {
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, marks[towlower(c1)]);
 			return 1;
 		}
 	}
