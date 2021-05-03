@@ -119,11 +119,21 @@ static char const *const *const vowels_marks[] = {
     [L'Ư'] = vowel_upper_uw_marks, [L'Y'] = vowel_upper_y_marks,
 };
 
-static int const is_accents[128] = {
-    [L'a'] = 1,
-    [L'e'] = 1,
-    [L'o'] = 1,
-    [L'w'] = 1,
+static int is_accent(char c)
+{
+	switch (c) {
+	case 'a':
+	case 'e':
+	case 'o':
+	case 'w':
+	case 'A':
+	case 'E':
+	case 'O':
+	case 'W':
+		return 1;
+	default:
+		return 0;
+	}
 };
 
 static char const *const vowel_a_accents[] = {
@@ -521,11 +531,56 @@ void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
 void daklakwl_buffer_raw_append(struct daklakwl_buffer *buffer,
 				char const *text)
 {
-	strcat(buffer->raw, text);
+	size_t text_len = strlen(text);
+	size_t raw_len = strlen(buffer->raw);
+	size_t raw_pos = buffer->pos;
+	buffer->raw = realloc(buffer->raw, raw_len + text_len + 1);
+	if (raw_pos == 0) {
+		memmove(buffer->raw + text_len, buffer->raw, raw_len + 1);
+		memcpy(buffer->raw, text, text_len);
+	} else if (raw_pos == raw_len) {
+		memcpy(buffer->raw + raw_len, text, text_len + 1);
+	} else {
+		size_t pos = buffer->pos;
+		for (; raw_pos != 0; raw_pos--) {
+			if (buffer->raw[raw_pos] == buffer->text[pos] &&
+			    buffer->raw[raw_pos - 1] == buffer->text[pos - 1])
+				break;
+			if (buffer->text[raw_pos] &&
+			    (buffer->raw[raw_pos] == buffer->text[pos] ||
+			     buffer->raw[raw_pos - 1] == buffer->text[pos - 1]))
+				break;
+		}
+		memmove(buffer->raw + raw_pos + text_len, buffer->raw + raw_pos,
+			raw_len - buffer->pos + 1);
+		memcpy(buffer->raw + raw_pos, text, text_len);
+	}
 }
 
 void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer,
 				      size_t amt)
+{
+	if (buffer->pos == 0)
+		return;
+	size_t end = buffer->pos;
+	size_t start = buffer->pos;
+	for (size_t i = 0; i < amt; i++) {
+		start -= 1;
+		for (; start != 0; start--) {
+			if ((buffer->text[start] & 0x80) == 0 ||
+			    (buffer->text[start] & 0xC0) == 0xC0) {
+				break;
+			}
+		}
+	}
+	memmove(buffer->text + start, buffer->text + end,
+		buffer->len - end + 1);
+	buffer->len -= end - start;
+	buffer->pos -= end - start;
+}
+
+void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
+					  size_t amt)
 {
 	if (buffer->pos == 0)
 		return;
@@ -571,12 +626,12 @@ void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer,
 		buffer->catalyst = '\0';
 	}
 	memmove(buffer->raw + match_last_char_pos, buffer->raw + raw_len, 1);
+	memmove(buffer->raw + raw_start, buffer->raw + raw_end,
+		raw_len - raw_end + 1);
 	memmove(buffer->text + start, buffer->text + end,
 		buffer->len - end + 1);
 	buffer->len -= end - start;
 	buffer->pos -= end - start;
-	memmove(buffer->raw + raw_start, buffer->raw + raw_end,
-		raw_len - raw_end + 1);
 }
 
 void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *buffer, size_t amt)
@@ -650,7 +705,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) && !is_vowel(c3) &&
 	    is_mark(towlower(c4)) && wc_pos == 5) {
 		char const *const *marks = vowels_marks[c1];
-		if (marks && marks && marks[towlower(c4)]) {
+		if (marks && marks[towlower(c4)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
 			daklakwl_buffer_move_left(buf);
 			daklakwl_buffer_move_left(buf);
@@ -663,7 +718,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   !is_vowel(c3) && is_accents[towlower(c4)] && wc_pos == 5) {
+		   !is_vowel(c3) && is_accent(towlower(c4)) && wc_pos == 5) {
 		// TODO: shall we?
 		char const *const *accents = vowels_accents[c1];
 		if (accents && accents[towlower(c4)]) {
@@ -703,7 +758,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			}
 		}
 	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   is_accents[towlower(c3)] && wc_pos == 4) {
+		   is_accent(towlower(c3)) && wc_pos == 4) {
 		// TODO: handle uouw and uyee
 		char const *const *c1_accents = vowels_accents[c1];
 		char const *const *c2_accents = vowels_accents[c2];
@@ -753,7 +808,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	} else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) &&
-		   is_accents[towlower(c3)] && wc_pos == 4) {
+		   is_accent(towlower(c3)) && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c1];
 		if (accents && accents[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -777,7 +832,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			return 1;
 		}
 	} else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2) &&
-		   is_accents[towlower(c3)] && wc_pos == 4) {
+		   is_accent(towlower(c3)) && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -789,7 +844,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (is_vowel(c0) && !is_vowel(c1) && is_accents[towlower(c2)] &&
+	} else if (is_vowel(c0) && !is_vowel(c1) && is_accent(towlower(c2)) &&
 		   wc_pos == 3) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c2)]) {
@@ -811,7 +866,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_move_right(buf);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_accents[towlower(c2)] &&
+	} else if (is_vowel(c0) && is_vowel(c1) && is_accent(towlower(c2)) &&
 		   wc_pos == 3) {
 		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
@@ -849,7 +904,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 				return 1;
 			}
 		}
-	} else if (is_vowel(c0) && is_accents[towlower(c1)] && wc_pos == 2) {
+	} else if (is_vowel(c0) && is_accent(towlower(c1)) && wc_pos == 2) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c1)]) {
 			daklakwl_buffer_delete_backwards(buf, 2);

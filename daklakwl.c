@@ -194,7 +194,7 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 	case XKB_KEY_BackSpace:
 		if (seat->buffer.len == 0)
 			return false;
-		daklakwl_buffer_delete_backwards(&seat->buffer, 1);
+		daklakwl_buffer_delete_backwards_all(&seat->buffer, 1);
 		daklakwl_seat_composing_update(seat);
 		return true;
 	case XKB_KEY_Delete:
