@@ -884,7 +884,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 		}
 	} else if (is_vowel(c0) && is_vowel(c1) && is_mark(towlower(c2)) &&
 		   wc_pos == 3) {
-		if (strcmp(buf->gi, "gi") == 0 || strcmp(buf->gi, "qu") == 0) {
+		if (strcasecmp(buf->gi, "gi") == 0 ||
+		    strcasecmp(buf->gi, "qu") == 0) {
 			char const *const *marks = vowels_marks[c1];
 			if (marks && marks[towlower(c2)]) {
 				daklakwl_buffer_delete_backwards(buf, 2);
@@ -958,8 +959,7 @@ static int daklakwl_buffer_compose_dd(struct daklakwl_buffer *buf)
 
 static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 {
-	if ((strcmp(buf->gi, "d") == 0 || strcmp(buf->gi, "đ") == 0 ||
-	     strcmp(buf->gi, "D") == 0 || strcmp(buf->gi, "Đ") == 0) &&
+	if ((strcasecmp(buf->gi, "d") == 0 || strcasecmp(buf->gi, "đ") == 0) &&
 	    buf->len > 1) {
 		if (!daklakwl_buffer_compose_dd(buf)) {
 			size_t gi_len = strlen(buf->gi);

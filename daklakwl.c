@@ -234,6 +234,11 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 			return false;
 		daklakwl_seat_composing_commit(seat);
 		return false;
+	case XKB_KEY_period:
+	case XKB_KEY_colon:
+	case XKB_KEY_semicolon:
+	case XKB_KEY_comma:
+	case XKB_KEY_question:
 	case XKB_KEY_Return:
 		if (seat->buffer.len == 0)
 			return false;
