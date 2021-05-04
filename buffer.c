@@ -728,7 +728,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 		}
 	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
 		   !is_vowel(c3) && is_mark(towlower(c4)) && wc_pos == 5) {
-		if (is_type2(c0, c1, c2)) {
+		if (is_type2(c0, c1, c2) || strcasecmp(buf->gi, "gi") == 0 ||
+		    strcasecmp(buf->gi, "qu") == 0) {
 			char const *const *marks = vowels_marks[c2];
 			if (marks && marks[towlower(c4)]) {
 				daklakwl_buffer_delete_backwards(buf, 1);
