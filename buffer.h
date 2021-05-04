@@ -5,6 +5,7 @@
 #include <wchar.h>
 
 struct daklakwl_buffer {
+	char *root;
 	char *text;
 	char *raw;
 	wchar_t *wc_text;

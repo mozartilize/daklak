@@ -512,7 +512,13 @@ void daklakwl_buffer_clear(struct daklakwl_buffer *buffer)
 void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
 {
 	size_t text_len = strlen(text);
-	buffer->text = realloc(buffer->text, buffer->len + text_len + 1);
+	if (buffer->root) {
+		size_t real_len = buffer->text - buffer->root + buffer->len;
+		buffer->root = realloc(buffer->root, real_len + text_len + 1);
+	} else {
+		buffer->text =
+		    realloc(buffer->text, buffer->len + text_len + 1);
+	}
 	if (buffer->pos == 0) {
 		memmove(buffer->text + text_len, buffer->text, buffer->len + 1);
 		memcpy(buffer->text, text, text_len);
@@ -679,7 +685,6 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 		return 0;
 	wchar_t *wc_text = buf->wc_text;
 	wchar_t c0 = '\0', c1 = '\0', c2 = '\0', c3 = '\0', c4 = '\0';
-	size_t wc_len = buf->wc_len;
 	size_t wc_pos = buf->wc_pos;
 
 	c0 = wc_text[0];
@@ -937,12 +942,12 @@ static int daklakwl_buffer_compose_dd(struct daklakwl_buffer *buf)
 	wchar_t cN = wc_text[wc_pos - 1];
 	if (towlower(c0) == L'd' && towlower(cN) == L'd') {
 		daklakwl_buffer_delete_backwards(buf, 1);
-		for (size_t i = wc_pos - 1; i >= 0; i--) {
+		for (size_t i = wc_pos - 2; i > 0; i--) {
 			daklakwl_buffer_move_left(buf);
 		}
 		daklakwl_buffer_delete_backwards(buf, 1);
 		daklakwl_buffer_append(buf, d_accents[c0]);
-		for (size_t i = wc_pos - 1; i >= 0; i--) {
+		for (size_t i = wc_pos - 2; i > 0; i--) {
 			daklakwl_buffer_move_right(buf);
 		}
 		free(buf->gi);
@@ -958,20 +963,20 @@ static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 	    buf->len > 1) {
 		if (!daklakwl_buffer_compose_dd(buf)) {
 			size_t gi_len = strlen(buf->gi);
-			char *t2 = strdup(buf->gi);
-			char *t = calloc(buf->len - gi_len, 1);
-			memcpy(t, buf->text + gi_len, buf->len - gi_len);
 			struct daklakwl_buffer sub_buf = {
-			    .text = t,
+			    .root = buf->text,
+			    .text = buf->text + gi_len,
 			    .len = buf->len - gi_len,
 			    .pos = buf->pos - gi_len,
-			    .gi = calloc(1, 1),
+			    .wc_len = buf->wc_len - 1,
+			    .wc_pos = buf->wc_pos - 1,
+			    .wc_text = mbsrdup(buf->text + gi_len),
+			    .gi = "",
 			};
 			int composed = daklakwl_buffer_compose_vowels(&sub_buf);
-			strcat(t2, sub_buf.text);
-			buf->text = t2;
-			buf->len = strlen(t2);
-			buf->pos = buf->len;
+			buf->len = sub_buf.len + gi_len;
+			buf->pos = sub_buf.pos + gi_len;
+			free(sub_buf.wc_text);
 			return composed;
 		} else {
 			return 1;
