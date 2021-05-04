@@ -7,9 +7,11 @@
 struct daklakwl_buffer {
 	char *text;
 	char *raw;
-	char *pending_text;
+	wchar_t *wc_text;
 	size_t len;
 	size_t pos;
+	size_t wc_len;
+	size_t wc_pos;
 	char accent;
 	char *gi;
 	char catalyst;
