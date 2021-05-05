@@ -515,7 +515,8 @@ void daklakwl_buffer_clear(struct daklakwl_buffer *buffer)
 	buffer->pos = 0;
 	for (size_t i = 0; i < 4; i++) {
 		if (buffer->steps[i]) {
-			buffer->steps[i] = '\0';
+			free(buffer->steps[i]);
+			buffer->steps[i] = NULL;
 		}
 	}
 }
