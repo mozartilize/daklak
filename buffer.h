@@ -16,6 +16,7 @@ struct daklakwl_buffer {
 	char accent;
 	char *gi;
 	char catalyst;
+	char *steps[4];
 };
 
 bool daklakwl_buffer_should_not_append(struct daklakwl_buffer *, char const *);
