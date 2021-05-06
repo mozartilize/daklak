@@ -606,14 +606,17 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 	size_t wc_len = mbslen(buffer->text);
 	size_t wc_pos = wc_len;
 	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
-		for (; start > 0; start--) {
-			if (wc_text[wc_pos] == buffer->text[start] ||
-			    wc_text[wc_pos - 1] == buffer->text[start - 1]) {
+		for (; start != 0; start--) {
+			if ((buffer->text[start] & 0x80) == 0 ||
+			    (buffer->text[start] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
-		if (start == buffer->pos)
+		if (start == buffer->pos &&
+		    (wc_text[wc_pos] == buffer->text[start] ||
+		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
 			break;
+		}
 	}
 	size_t end = buffer->pos;
 	size_t start = buffer->pos;
@@ -676,6 +679,9 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 						break;
 					}
 				}
+				if (f[0] == buffer->catalyst) {
+					buffer->catalyst = '\0';
+				}
 				f++;
 			}
 			free(buffer->steps[i]);
@@ -690,16 +696,115 @@ void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *buffer, size_t amt)
 	if (buffer->pos == buffer->len)
 		return;
 	size_t start = buffer->pos;
-	size_t end = start + 1;
-	for (; end != buffer->len; end++) {
-		if ((buffer->text[end] & 0x80) == 0 ||
-		    (buffer->text[end] & 0xC0) == 0xC0) {
-			break;
+	size_t end = start;
+	for (size_t i = 0; i < amt; i++) {
+		end += 1;
+		for (; end != buffer->len; end++) {
+			if ((buffer->text[end] & 0x80) == 0 ||
+			    (buffer->text[end] & 0xC0) == 0xC0) {
+				break;
+			}
 		}
 	}
 	memmove(buffer->text + start, buffer->text + end,
 		buffer->len - end + 1);
 	buffer->len -= end - start;
+}
+
+void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
+					 size_t amt)
+{
+	if (buffer->pos == buffer->len)
+		return;
+	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
+	size_t wc_len = mbslen(buffer->text);
+	size_t wc_pos = wc_len;
+	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
+		for (; start != 0; start--) {
+			if ((buffer->text[start] & 0x80) == 0 ||
+			    (buffer->text[start] & 0xC0) == 0xC0) {
+				break;
+			}
+		}
+		if (start == buffer->pos &&
+		    (wc_text[wc_pos] == buffer->text[start] ||
+		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
+			break;
+		}
+	}
+	size_t start = buffer->pos;
+	size_t end = start;
+	size_t wc_start = wc_pos;
+	size_t raw_start = buffer->pos;
+
+	for (size_t i = 0; i < amt; i++) {
+		end += 1;
+		wc_pos += 1;
+		for (; end != buffer->len; end++) {
+			if ((buffer->text[end] & 0x80) == 0 ||
+			    (buffer->text[end] & 0xC0) == 0xC0) {
+				break;
+			}
+		}
+	}
+
+	for (; raw_start != 0; raw_start--) {
+		if (buffer->raw[raw_start] == buffer->text[start] ||
+		    buffer->raw[raw_start - 1] == buffer->text[start - 1])
+			break;
+	}
+	memmove(buffer->text + start, buffer->text + end,
+		buffer->len - end + 1);
+	buffer->len -= end - start;
+	for (size_t i = wc_start; i < wc_pos; i++) {
+		size_t raw_len = strlen(buffer->raw);
+		if (!buffer->steps[i] || i >= 4) {
+			for (size_t j = raw_start; j < raw_len; j++) {
+				if (buffer->raw[j] == wc_text[i]) {
+					memmove(buffer->raw + j,
+						buffer->raw + j + 1,
+						raw_len - j + 1);
+					break;
+				}
+			}
+		} else {
+			char *s = buffer->steps[i];
+			char c = s[0];
+			char *f = s + 1;
+			for (size_t j = raw_start; j < raw_len; j++) {
+				if (buffer->raw[j] == c) {
+					memmove(buffer->raw + j,
+						buffer->raw + j + 1,
+						raw_len - j + 1);
+					break;
+				}
+			}
+			raw_len -= 1;
+			while (strlen(f) > 0) {
+				for (size_t j = raw_start; j < raw_len; j++) {
+					if (buffer->raw[j] == f[0]) {
+						memmove(buffer->raw + j,
+							buffer->raw + j + 1,
+							raw_len - j + 1);
+						raw_len -= 1;
+						break;
+					}
+				}
+				if (f[0] == buffer->catalyst) {
+					buffer->catalyst = '\0';
+				}
+				f++;
+			}
+			for (size_t j = i; j < wc_pos + 1; j++) {
+				free(buffer->steps[j]);
+				buffer->steps[j] = NULL;
+				if (buffer->steps[j + 1])
+					buffer->steps[j] =
+					    strdup(buffer->steps[j + 1]);
+			}
+		}
+	}
+	free(wc_text);
 }
 
 void daklakwl_buffer_move_left(struct daklakwl_buffer *buffer)
@@ -1076,7 +1181,8 @@ static int daklakwl_buffer_compose_dd(struct daklakwl_buffer *buf)
 
 static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 {
-	if ((strcasecmp(buf->gi, "d") == 0 || strcasecmp(buf->gi, "đ") == 0) &&
+	if ((strcasecmp(buf->gi, "d") == 0 || strcmp(buf->gi, "đ") == 0 ||
+	     strcmp(buf->gi, "Đ") == 0) &&
 	    buf->len > 1) {
 		if (!daklakwl_buffer_compose_dd(buf)) {
 			size_t gi_len = strlen(buf->gi);
@@ -1135,14 +1241,17 @@ void daklakwl_buffer_compose(struct daklakwl_buffer *buffer)
 	size_t wc_len = buffer->wc_len = mbslen(buffer->text);
 	size_t wc_pos = wc_len;
 	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
-		for (; start > 0; start--) {
-			if (wc_text[wc_pos] == buffer->text[start] ||
-			    wc_text[wc_pos - 1] == buffer->text[start - 1]) {
+		for (; start != 0; start--) {
+			if ((buffer->text[start] & 0x80) == 0 ||
+			    (buffer->text[start] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
-		if (start == buffer->pos)
+		if (start == buffer->pos &&
+		    (wc_text[wc_pos] == buffer->text[start] ||
+		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
 			break;
+		}
 	}
 	buffer->wc_pos = wc_pos;
 	char cN = buffer->text[buffer->pos - 1];

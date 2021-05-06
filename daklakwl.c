@@ -202,7 +202,7 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 	case XKB_KEY_Delete:
 		if (seat->buffer.len == 0)
 			return false;
-		daklakwl_buffer_delete_forwards(&seat->buffer, 1);
+		daklakwl_buffer_delete_forwards_all(&seat->buffer, 1);
 		daklakwl_seat_composing_update(seat);
 		if (seat->buffer.len == 0)
 			daklakwl_seat_composing_commit(seat);

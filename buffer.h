@@ -29,6 +29,7 @@ void daklakwl_buffer_gi_append(struct daklakwl_buffer *, const char *);
 void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *, size_t);
 void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *, size_t);
 void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *, size_t);
+void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *, size_t);
 void daklakwl_buffer_move_left(struct daklakwl_buffer *);
 void daklakwl_buffer_move_right(struct daklakwl_buffer *);
 void daklakwl_buffer_compose(struct daklakwl_buffer *);
