@@ -602,11 +602,28 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 {
 	if (buffer->pos == 0)
 		return;
+	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
+	size_t wc_len = mbslen(buffer->text);
+	size_t wc_pos = wc_len;
+	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
+		for (; start > 0; start--) {
+			if (wc_text[wc_pos] == buffer->text[start] ||
+			    wc_text[wc_pos - 1] == buffer->text[start - 1]) {
+				break;
+			}
+		}
+		if (start == buffer->pos)
+			break;
+	}
 	size_t end = buffer->pos;
 	size_t start = buffer->pos;
+	size_t wc_start = wc_pos;
+	size_t raw_start = buffer->pos;
 
 	for (size_t i = 0; i < amt; i++) {
 		start -= 1;
+		wc_start -= 1;
+		raw_start -= 1;
 		for (; start != 0; start--) {
 			if ((buffer->text[start] & 0x80) == 0 ||
 			    (buffer->text[start] & 0xC0) == 0xC0) {
@@ -614,10 +631,58 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 			}
 		}
 	}
+
+	for (; raw_start != 0; raw_start--) {
+		if (buffer->raw[raw_start] == buffer->text[start] ||
+		    buffer->raw[raw_start - 1] == buffer->text[start - 1])
+			break;
+	}
+
 	memmove(buffer->text + start, buffer->text + end,
 		buffer->len - end + 1);
 	buffer->len -= end - start;
 	buffer->pos -= end - start;
+	for (size_t i = wc_start; i < wc_pos; i++) {
+		size_t raw_len = strlen(buffer->raw);
+		if (!buffer->steps[i] || i >= 4) {
+			for (size_t j = raw_start; j < raw_len; j++) {
+				if (buffer->raw[j] == wc_text[i]) {
+					memmove(buffer->raw + j,
+						buffer->raw + j + 1,
+						raw_len - j + 1);
+					break;
+				}
+			}
+		} else {
+			char *s = buffer->steps[i];
+			char c = s[0];
+			char *f = s + 1;
+			for (size_t j = raw_start; j < raw_len; j++) {
+				if (buffer->raw[j] == c) {
+					memmove(buffer->raw + j,
+						buffer->raw + j + 1,
+						raw_len - j + 1);
+					break;
+				}
+			}
+			raw_len -= 1;
+			while (strlen(f) > 0) {
+				for (size_t j = raw_start; j < raw_len; j++) {
+					if (buffer->raw[j] == f[0]) {
+						memmove(buffer->raw + j,
+							buffer->raw + j + 1,
+							raw_len - j + 1);
+						raw_len -= 1;
+						break;
+					}
+				}
+				f++;
+			}
+			free(buffer->steps[i]);
+			buffer->steps[i] = NULL;
+		}
+	}
+	free(wc_text);
 }
 
 void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *buffer, size_t amt)
