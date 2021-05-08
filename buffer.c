@@ -492,17 +492,22 @@ void daklakwl_buffer_init(struct daklakwl_buffer *buffer)
 	buffer->raw = calloc(1, 1);
 }
 
-void daklakwl_buffer_destroy(struct daklakwl_buffer *buffer)
+void daklakwl_buffer_steps_destroy(struct daklakwl_buffer *buffer)
 {
-	free(buffer->text);
-	free(buffer->gi);
-	free(buffer->raw);
 	for (size_t i = 0; i < 4; i++) {
 		if (buffer->steps[i]) {
 			free(buffer->steps[i]);
 			buffer->steps[i] = NULL;
 		}
 	}
+}
+
+void daklakwl_buffer_destroy(struct daklakwl_buffer *buffer)
+{
+	free(buffer->text);
+	free(buffer->gi);
+	free(buffer->raw);
+	daklakwl_buffer_steps_destroy(buffer);
 }
 
 void daklakwl_buffer_clear(struct daklakwl_buffer *buffer)
@@ -513,12 +518,7 @@ void daklakwl_buffer_clear(struct daklakwl_buffer *buffer)
 	buffer->catalyst = '\0';
 	buffer->len = 0;
 	buffer->pos = 0;
-	for (size_t i = 0; i < 4; i++) {
-		if (buffer->steps[i]) {
-			free(buffer->steps[i]);
-			buffer->steps[i] = NULL;
-		}
-	}
+	daklakwl_buffer_steps_destroy(buffer);
 }
 
 void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
@@ -546,12 +546,49 @@ void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
 	buffer->pos += text_len;
 }
 
+void daklakwl_buffer_set_wc_text(struct daklakwl_buffer *buffer)
+{
+	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
+	size_t wc_len = buffer->wc_len = mbslen(buffer->text);
+	size_t wc_pos = wc_len;
+	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
+		for (; start != 0; start--) {
+			if ((buffer->text[start] & 0x80) == 0 ||
+			    (buffer->text[start] & 0xC0) == 0xC0) {
+				break;
+			}
+		}
+		if (start == buffer->pos &&
+		    (wc_text[wc_pos] == buffer->text[start] ||
+		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
+			break;
+		}
+	}
+	buffer->wc_pos = wc_pos;
+}
+
 void daklakwl_buffer_raw_append(struct daklakwl_buffer *buffer,
 				char const *text)
 {
 	size_t text_len = strlen(text);
 	size_t raw_len = strlen(buffer->raw);
-	size_t raw_pos = buffer->pos;
+	size_t raw_pos = raw_len;
+	if (buffer->pos != buffer->len) {
+		daklakwl_buffer_set_wc_text(buffer);
+		size_t wc_pos = buffer->wc_pos;
+		char comparer;
+		if (wc_pos <= 4 && buffer->steps[wc_pos - 1]) {
+			comparer = buffer->steps[wc_pos - 1][0];
+		} else {
+			comparer = buffer->text[buffer->pos];
+		}
+		for (; raw_pos != 0; raw_pos--) {
+			if (buffer->raw[raw_pos] == comparer ||
+			    buffer->raw[raw_pos - 1] ==
+				buffer->text[buffer->pos - 1])
+				break;
+		}
+	}
 	buffer->raw = realloc(buffer->raw, raw_len + text_len + 1);
 	if (raw_pos == 0) {
 		memmove(buffer->raw + text_len, buffer->raw, raw_len + 1);
@@ -602,22 +639,9 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 {
 	if (buffer->pos == 0)
 		return;
-	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
-	size_t wc_len = mbslen(buffer->text);
-	size_t wc_pos = wc_len;
-	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
-		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
-				break;
-			}
-		}
-		if (start == buffer->pos &&
-		    (wc_text[wc_pos] == buffer->text[start] ||
-		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
-			break;
-		}
-	}
+	daklakwl_buffer_set_wc_text(buffer);
+	wchar_t *wc_text = buffer->wc_text;
+	size_t wc_pos = buffer->wc_pos;
 	size_t end = buffer->pos;
 	size_t start = buffer->pos;
 	size_t wc_start = wc_pos;
@@ -635,8 +659,14 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 		}
 	}
 
+	char comparer;
+	if (wc_pos <= 4 && buffer->steps[wc_pos - 1]) {
+		comparer = buffer->steps[wc_pos - 1][0];
+	} else {
+		comparer = buffer->text[start];
+	}
 	for (; raw_start != 0; raw_start--) {
-		if (buffer->raw[raw_start] == buffer->text[start] ||
+		if (buffer->raw[raw_start] == comparer ||
 		    buffer->raw[raw_start - 1] == buffer->text[start - 1])
 			break;
 	}
@@ -669,6 +699,7 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 				}
 			}
 			raw_len -= 1;
+			raw_start -= 1;
 			while (strlen(f) > 0) {
 				for (size_t j = raw_start; j < raw_len; j++) {
 					if (buffer->raw[j] == f[0]) {
@@ -716,22 +747,9 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 {
 	if (buffer->pos == buffer->len)
 		return;
-	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
-	size_t wc_len = mbslen(buffer->text);
-	size_t wc_pos = wc_len;
-	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
-		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
-				break;
-			}
-		}
-		if (start == buffer->pos &&
-		    (wc_text[wc_pos] == buffer->text[start] ||
-		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
-			break;
-		}
-	}
+	daklakwl_buffer_set_wc_text(buffer);
+	wchar_t *wc_text = buffer->wc_text;
+	size_t wc_pos = buffer->wc_pos;
 	size_t start = buffer->pos;
 	size_t end = start;
 	size_t wc_start = wc_pos;
@@ -747,9 +765,14 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 			}
 		}
 	}
-
+	char comparer = '\0';
+	if (wc_pos <= 4 && buffer->steps[wc_pos - 1]) {
+		comparer = buffer->steps[wc_pos - 1][0];
+	} else {
+		comparer = buffer->text[start];
+	}
 	for (; raw_start != 0; raw_start--) {
-		if (buffer->raw[raw_start] == buffer->text[start] ||
+		if (buffer->raw[raw_start] == comparer ||
 		    buffer->raw[raw_start - 1] == buffer->text[start - 1])
 			break;
 	}
@@ -1236,51 +1259,33 @@ void daklakwl_buffer_gi_append(struct daklakwl_buffer *buffer, const char *utf8)
 
 void daklakwl_buffer_compose(struct daklakwl_buffer *buffer)
 {
-	int composed;
-	wchar_t *wc_text = buffer->wc_text = mbsrdup(buffer->text);
-	size_t wc_len = buffer->wc_len = mbslen(buffer->text);
-	size_t wc_pos = wc_len;
-	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
-		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
-				break;
-			}
-		}
-		if (start == buffer->pos &&
-		    (wc_text[wc_pos] == buffer->text[start] ||
-		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
-			break;
-		}
-	}
-	buffer->wc_pos = wc_pos;
+	if (buffer->len == 0)
+		return;
+	daklakwl_buffer_set_wc_text(buffer);
+	wchar_t *wc_text = buffer->wc_text;
 	char cN = buffer->text[buffer->pos - 1];
 	if (buffer->catalyst && buffer->catalyst == cN && is_mark(cN) &&
 	    buffer->len == buffer->pos) {
-		composed = 0;
+		size_t raw_len = strlen(buffer->raw) - 1;
+		free(buffer->text);
+		char *temp_raw = buffer->raw;
+		buffer->text = calloc(raw_len, 1);
+		strncpy(buffer->text, temp_raw, raw_len);
+		buffer->raw = calloc(raw_len, 1);
+		strncpy(buffer->raw, temp_raw, raw_len);
+		free(temp_raw);
+		buffer->len = raw_len;
+		buffer->pos = raw_len;
+		buffer->catalyst = '\0';
+		daklakwl_buffer_steps_destroy(buffer);
 	} else {
 		if (strcasecmp(buffer->gi, "d") == 0) {
 			buffer->steps[0] = calloc(1, 1);
 			buffer->steps[0][0] = buffer->gi[0];
 		}
-		composed = daklakwl_buffer_compose_full(buffer);
-	}
-	if (composed) {
-		buffer->catalyst = cN;
-	} else {
-		if (buffer->catalyst == cN) {
-			size_t raw_len = strlen(buffer->raw) - 1;
-			free(buffer->text);
-			char *temp_raw = buffer->raw;
-			buffer->text = calloc(raw_len, 1);
-			strncpy(buffer->text, temp_raw, raw_len);
-			buffer->raw = calloc(raw_len, 1);
-			strncpy(buffer->raw, temp_raw, raw_len);
-			free(temp_raw);
-			buffer->len = raw_len;
-			buffer->pos = raw_len;
-			buffer->catalyst = '\0';
-		}
+		int composed = daklakwl_buffer_compose_full(buffer);
+		if (composed)
+			buffer->catalyst = cN;
 	}
 	free(wc_text);
 }
