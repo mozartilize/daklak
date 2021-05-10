@@ -379,43 +379,24 @@ static char const *const *const vowels_accents[] = {
     [L'Ọ'] = vowel_upper_oj_accents, [L'Ụ'] = vowel_upper_uj_accents,
 };
 
-static int const type1_c0[7929] = {
-    [L'â'] = 1, [L'i'] = 1, [L'u'] = 1, [L'ư'] = 1, [L'y'] = 1,
-};
-
-static int const type1_c1[7929] = {
-    [L'ê'] = 1,
-    [L'â'] = 1,
-    [L'ô'] = 1,
-    [L'ơ'] = 1,
-};
-
-static int const type2_c0[7929] = {
-    [L'ă'] = 1,
-    [L'o'] = 1,
-    [L'u'] = 1,
-};
-
-static int const type2_c1[7929] = {
-    [L'ă'] = 1,
-    [L'o'] = 1,
-    [L'i'] = 1,
-    [L'y'] = 1,
-};
-
-static int const type2_c2[7929] = {
-    [L'ê'] = 1,
-};
-
-static bool is_type1(wchar_t c0, wchar_t c1)
+static bool is_type1(wchar_t lower_c0, wchar_t lower_c1)
 {
-	return type1_c0[towlower(c0)] && c1 && type1_c1[towlower(c1)];
+	return (lower_c0 == L'â' && !lower_c1) ||
+	       (lower_c0 == L'i' && lower_c1 == L'ê') ||
+	       (lower_c0 == L'u' && lower_c1 == L'â') ||
+	       (lower_c0 == L'u' && lower_c1 == L'ô') ||
+	       (lower_c0 == L'ư' && lower_c1 == L'ơ') ||
+	       (lower_c0 == L'y' && lower_c1 == L'ê');
 }
 
-static bool is_type2(wchar_t c0, wchar_t c1, wchar_t c2)
+static bool is_type2(wchar_t lower_c0, wchar_t lower_c1, wchar_t lower_c2)
 {
-	return type2_c0[towlower(c0)] && c1 && type2_c1[towlower(c1)] && c2 &&
-	       type2_c2[towlower(c2)];
+	return (lower_c0 == L'ă' && !lower_c0 && !lower_c2) ||
+	       (lower_c0 == L'o' && lower_c1 == L'ă' && !lower_c2) ||
+	       (lower_c0 == L'o' && lower_c1 == L'o' && !lower_c2) ||
+	       (lower_c0 == L'ô' && lower_c1 == L'ô' && !lower_c2) ||
+	       (lower_c0 == L'u' && lower_c1 == L'ă' && !lower_c2) ||
+		   (lower_c0 == L'u' && lower_c1 == L'y' && lower_c2 == L'ê');
 }
 
 static int is_mark(char c)
