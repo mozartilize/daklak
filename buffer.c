@@ -381,22 +381,22 @@ static char const *const *const vowels_accents[] = {
 
 static bool is_type1(wchar_t lower_c0, wchar_t lower_c1)
 {
-	return (lower_c0 == L'â' && !lower_c1) ||
-	       (lower_c0 == L'i' && lower_c1 == L'ê') ||
-	       (lower_c0 == L'u' && lower_c1 == L'â') ||
-	       (lower_c0 == L'u' && lower_c1 == L'ô') ||
-	       (lower_c0 == L'ư' && lower_c1 == L'ơ') ||
-	       (lower_c0 == L'y' && lower_c1 == L'ê');
+	return (lower_c0 == L'â' && !lower_c1)
+	       || (lower_c0 == L'i' && lower_c1 == L'ê')
+	       || (lower_c0 == L'u' && lower_c1 == L'â')
+	       || (lower_c0 == L'u' && lower_c1 == L'ô')
+	       || (lower_c0 == L'ư' && lower_c1 == L'ơ')
+	       || (lower_c0 == L'y' && lower_c1 == L'ê');
 }
 
 static bool is_type2(wchar_t lower_c0, wchar_t lower_c1, wchar_t lower_c2)
 {
-	return (lower_c0 == L'ă' && !lower_c0 && !lower_c2) ||
-	       (lower_c0 == L'o' && lower_c1 == L'ă' && !lower_c2) ||
-	       (lower_c0 == L'o' && lower_c1 == L'o' && !lower_c2) ||
-	       (lower_c0 == L'ô' && lower_c1 == L'ô' && !lower_c2) ||
-	       (lower_c0 == L'u' && lower_c1 == L'ă' && !lower_c2) ||
-	       (lower_c0 == L'u' && lower_c1 == L'y' && lower_c2 == L'ê');
+	return (lower_c0 == L'ă' && !lower_c0 && !lower_c2)
+	       || (lower_c0 == L'o' && lower_c1 == L'ă' && !lower_c2)
+	       || (lower_c0 == L'o' && lower_c1 == L'o' && !lower_c2)
+	       || (lower_c0 == L'ô' && lower_c1 == L'ô' && !lower_c2)
+	       || (lower_c0 == L'u' && lower_c1 == L'ă' && !lower_c2)
+	       || (lower_c0 == L'u' && lower_c1 == L'y' && lower_c2 == L'ê');
 }
 
 static int is_mark(char c)
@@ -508,16 +508,19 @@ void daklakwl_buffer_append(struct daklakwl_buffer *buffer, char const *text)
 	if (buffer->root) {
 		size_t real_len = buffer->text - buffer->root + buffer->len;
 		buffer->root = realloc(buffer->root, real_len + text_len + 1);
-	} else {
-		buffer->text =
-		    realloc(buffer->text, buffer->len + text_len + 1);
+	}
+	else {
+		buffer->text
+		    = realloc(buffer->text, buffer->len + text_len + 1);
 	}
 	if (buffer->pos == 0) {
 		memmove(buffer->text + text_len, buffer->text, buffer->len + 1);
 		memcpy(buffer->text, text, text_len);
-	} else if (buffer->pos == buffer->len) {
+	}
+	else if (buffer->pos == buffer->len) {
 		memcpy(buffer->text + buffer->len, text, text_len + 1);
-	} else {
+	}
+	else {
 		memmove(buffer->text + buffer->pos + text_len,
 			buffer->text + buffer->pos,
 			buffer->len - buffer->pos + 1);
@@ -534,14 +537,14 @@ void daklakwl_buffer_set_wc_text(struct daklakwl_buffer *buffer)
 	size_t wc_pos = wc_len;
 	for (size_t start = buffer->len; wc_pos > 0; wc_pos--, start--) {
 		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
+			if ((buffer->text[start] & 0x80) == 0
+			    || (buffer->text[start] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
-		if (start == buffer->pos &&
-		    (wc_text[wc_pos] == buffer->text[start] ||
-		     wc_text[wc_pos - 1] == buffer->text[start - 1])) {
+		if (start == buffer->pos
+		    && (wc_text[wc_pos] == buffer->text[start]
+			|| wc_text[wc_pos - 1] == buffer->text[start - 1])) {
 			break;
 		}
 	}
@@ -561,23 +564,23 @@ void daklakwl_buffer_raw_append(struct daklakwl_buffer *buffer,
 		bool check_both_side = false;
 		if (wc_pos < 4 && buffer->steps[wc_pos]) {
 			comparer = buffer->steps[wc_pos][0];
-		} else {
+		}
+		else {
 			comparer = buffer->text[buffer->pos];
 		}
-		if ((wc_pos < 4 && !buffer->steps[wc_pos] &&
-		     !buffer->steps[wc_pos - 1]) ||
-		    wc_pos >= 4) {
+		if ((wc_pos < 4 && !buffer->steps[wc_pos]
+		     && !buffer->steps[wc_pos - 1])
+		    || wc_pos >= 4) {
 			check_both_side = true;
 		}
 		for (; raw_pos != 0; raw_pos--) {
-			if (check_both_side &&
-			    buffer->raw[raw_pos] == comparer &&
-			    buffer->raw[raw_pos - 1] ==
-				buffer->text[buffer->pos - 1])
+			if (check_both_side && buffer->raw[raw_pos] == comparer
+			    && buffer->raw[raw_pos - 1]
+				   == buffer->text[buffer->pos - 1])
 				break;
-			else if (buffer->raw[raw_pos] == comparer ||
-				 buffer->raw[raw_pos - 1] ==
-				     buffer->text[buffer->pos - 1])
+			else if (buffer->raw[raw_pos] == comparer
+				 || buffer->raw[raw_pos - 1]
+					== buffer->text[buffer->pos - 1])
 				break;
 		}
 	}
@@ -585,17 +588,21 @@ void daklakwl_buffer_raw_append(struct daklakwl_buffer *buffer,
 	if (raw_pos == 0) {
 		memmove(buffer->raw + text_len, buffer->raw, raw_len + 1);
 		memcpy(buffer->raw, text, text_len);
-	} else if (raw_pos == raw_len) {
+	}
+	else if (raw_pos == raw_len) {
 		memcpy(buffer->raw + raw_len, text, text_len + 1);
-	} else {
+	}
+	else {
 		size_t pos = buffer->pos;
 		for (; raw_pos != 0; raw_pos--) {
-			if (buffer->raw[raw_pos] == buffer->text[pos] &&
-			    buffer->raw[raw_pos - 1] == buffer->text[pos - 1])
+			if (buffer->raw[raw_pos] == buffer->text[pos]
+			    && buffer->raw[raw_pos - 1]
+				   == buffer->text[pos - 1])
 				break;
-			if (buffer->text[raw_pos] &&
-			    (buffer->raw[raw_pos] == buffer->text[pos] ||
-			     buffer->raw[raw_pos - 1] == buffer->text[pos - 1]))
+			if (buffer->text[raw_pos]
+			    && (buffer->raw[raw_pos] == buffer->text[pos]
+				|| buffer->raw[raw_pos - 1]
+				       == buffer->text[pos - 1]))
 				break;
 		}
 		memmove(buffer->raw + raw_pos + text_len, buffer->raw + raw_pos,
@@ -614,8 +621,8 @@ void daklakwl_buffer_delete_backwards(struct daklakwl_buffer *buffer,
 	for (size_t i = 0; i < amt; i++) {
 		start -= 1;
 		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
+			if ((buffer->text[start] & 0x80) == 0
+			    || (buffer->text[start] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
@@ -644,8 +651,8 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 		wc_start -= 1;
 		raw_start -= 1;
 		for (; start != 0; start--) {
-			if ((buffer->text[start] & 0x80) == 0 ||
-			    (buffer->text[start] & 0xC0) == 0xC0) {
+			if ((buffer->text[start] & 0x80) == 0
+			    || (buffer->text[start] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
@@ -657,22 +664,23 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 		bool check_both_side = false;
 		if (wc_start < 4 && buffer->steps[wc_start]) {
 			comparer = buffer->steps[wc_start][0];
-		} else {
+		}
+		else {
 			comparer = buffer->text[start];
 		}
-		if (wc_start < 4 && !buffer->steps[wc_start] &&
-		    !buffer->steps[wc_start - 1]) {
+		if (wc_start < 4 && !buffer->steps[wc_start]
+		    && !buffer->steps[wc_start - 1]) {
 			check_both_side = true;
 		}
 		for (; raw_start != 0; raw_start--) {
-			if (check_both_side &&
-			    buffer->raw[raw_start] == comparer &&
-			    buffer->raw[raw_start - 1] ==
-				buffer->text[start - 1])
+			if (check_both_side
+			    && buffer->raw[raw_start] == comparer
+			    && buffer->raw[raw_start - 1]
+				   == buffer->text[start - 1])
 				break;
-			else if (buffer->raw[raw_start] == comparer ||
-				 buffer->raw[raw_start - 1] ==
-				     buffer->text[start - 1])
+			else if (buffer->raw[raw_start] == comparer
+				 || buffer->raw[raw_start - 1]
+					== buffer->text[start - 1])
 				break;
 		}
 	}
@@ -692,7 +700,8 @@ void daklakwl_buffer_delete_backwards_all(struct daklakwl_buffer *buffer,
 					break;
 				}
 			}
-		} else {
+		}
+		else {
 			char *s = buffer->steps[i];
 			char c = s[0];
 			char *f = s + 1;
@@ -737,8 +746,8 @@ void daklakwl_buffer_delete_forwards(struct daklakwl_buffer *buffer, size_t amt)
 	for (size_t i = 0; i < amt; i++) {
 		end += 1;
 		for (; end != buffer->len; end++) {
-			if ((buffer->text[end] & 0x80) == 0 ||
-			    (buffer->text[end] & 0xC0) == 0xC0) {
+			if ((buffer->text[end] & 0x80) == 0
+			    || (buffer->text[end] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
@@ -765,8 +774,8 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 		end += 1;
 		wc_pos += 1;
 		for (; end != buffer->len; end++) {
-			if ((buffer->text[end] & 0x80) == 0 ||
-			    (buffer->text[end] & 0xC0) == 0xC0) {
+			if ((buffer->text[end] & 0x80) == 0
+			    || (buffer->text[end] & 0xC0) == 0xC0) {
 				break;
 			}
 		}
@@ -778,22 +787,23 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 		bool check_both_side = false;
 		if (wc_start < 4 && buffer->steps[wc_start]) {
 			comparer = buffer->steps[wc_start][0];
-		} else {
+		}
+		else {
 			comparer = buffer->text[start];
 		}
-		if (wc_start < 4 && !buffer->steps[wc_start] &&
-		    !buffer->steps[wc_start - 1]) {
+		if (wc_start < 4 && !buffer->steps[wc_start]
+		    && !buffer->steps[wc_start - 1]) {
 			check_both_side = true;
 		}
 		for (; raw_start != 0; raw_start--) {
-			if (check_both_side &&
-			    buffer->raw[raw_start] == comparer &&
-			    buffer->raw[raw_start - 1] ==
-				buffer->text[start - 1])
+			if (check_both_side
+			    && buffer->raw[raw_start] == comparer
+			    && buffer->raw[raw_start - 1]
+				   == buffer->text[start - 1])
 				break;
-			else if (buffer->raw[raw_start] == comparer ||
-				 buffer->raw[raw_start - 1] ==
-				     buffer->text[start - 1])
+			else if (buffer->raw[raw_start] == comparer
+				 || buffer->raw[raw_start - 1]
+					== buffer->text[start - 1])
 				break;
 		}
 	}
@@ -812,7 +822,8 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 					break;
 				}
 			}
-		} else {
+		}
+		else {
 			char *s = buffer->steps[i];
 			char c = s[0];
 			char *f = s + 1;
@@ -844,8 +855,8 @@ void daklakwl_buffer_delete_forwards_all(struct daklakwl_buffer *buffer,
 				free(buffer->steps[j]);
 				buffer->steps[j] = NULL;
 				if (buffer->steps[j + 1])
-					buffer->steps[j] =
-					    strdup(buffer->steps[j + 1]);
+					buffer->steps[j]
+					    = strdup(buffer->steps[j + 1]);
 			}
 		}
 	}
@@ -857,8 +868,8 @@ void daklakwl_buffer_move_left(struct daklakwl_buffer *buffer)
 	if (buffer->pos == 0)
 		return;
 	buffer->pos -= 1;
-	while ((buffer->text[buffer->pos] & 0x80) != 0 &&
-	       (buffer->text[buffer->pos] & 0xC0) != 0xC0) {
+	while ((buffer->text[buffer->pos] & 0x80) != 0
+	       && (buffer->text[buffer->pos] & 0xC0) != 0xC0) {
 		buffer->pos -= 1;
 	}
 }
@@ -868,8 +879,8 @@ void daklakwl_buffer_move_right(struct daklakwl_buffer *buffer)
 	if (buffer->pos == buffer->len)
 		return;
 	buffer->pos += 1;
-	while ((buffer->text[buffer->pos] & 0x80) != 0 &&
-	       (buffer->text[buffer->pos] & 0xC0) != 0xC0) {
+	while ((buffer->text[buffer->pos] & 0x80) != 0
+	       && (buffer->text[buffer->pos] & 0xC0) != 0xC0) {
 		buffer->pos += 1;
 	}
 }
@@ -881,7 +892,8 @@ static void daklakwl_buffer_steps_append(struct daklakwl_buffer *buffer,
 	buffer->steps[wc_pos] = realloc(buffer->steps[wc_pos], len + 2);
 	buffer->steps[wc_pos][len] = wctob(wc);
 	// wc get added on init, after composed, we have to remove it
-	if (wc_pos + 1 < 4 && buffer->steps[wc_pos + 1]) {
+	if (wc_pos + 1 < 4 && buffer->steps[wc_pos + 1]
+	    && buffer->steps[wc_pos + 1][0] != buffer->wc_text[wc_pos + 1]) {
 		free(buffer->steps[wc_pos + 1]);
 		buffer->steps[wc_pos + 1] = NULL;
 	}
@@ -928,8 +940,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	if (wc_pos >= 5)
 		c4 = wc_text[4];
 
-	if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) && !is_vowel(c3) &&
-	    is_mark(towlower(c4)) && wc_pos == 5) {
+	if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) && !is_vowel(c3)
+	    && is_mark(towlower(c4)) && wc_pos == 5) {
 		char const *const *marks = vowels_marks[c1];
 		if (marks && marks[towlower(c4)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -942,8 +954,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 1, c4);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   !is_vowel(c3) && is_accent(towlower(c4)) && wc_pos == 5) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) && !is_vowel(c3)
+		 && is_accent(towlower(c4)) && wc_pos == 5) {
 		// TODO: shall we?
 		char const *const *accents = vowels_accents[c1];
 		if (accents && accents[towlower(c4)]) {
@@ -957,11 +970,12 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 1, c4);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   !is_vowel(c3) && is_mark(towlower(c4)) && wc_pos == 5) {
-		if (is_type2(towlower(c0), towlower(c1), towlower(c2)) ||
-		    strcasecmp(buf->gi, "gi") == 0 ||
-		    strcasecmp(buf->gi, "qu") == 0) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) && !is_vowel(c3)
+		 && is_mark(towlower(c4)) && wc_pos == 5) {
+		if (is_type2(towlower(c0), towlower(c1), towlower(c2))
+		    || strcasecmp(buf->gi, "gi") == 0
+		    || strcasecmp(buf->gi, "qu") == 0) {
 			char const *const *marks = vowels_marks[c2];
 			if (marks && marks[towlower(c4)]) {
 				daklakwl_buffer_delete_backwards(buf, 1);
@@ -974,7 +988,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 							     c4);
 				return 1;
 			}
-		} else {
+		}
+		else {
 			char const *const *marks = vowels_marks[c1];
 			if (marks && marks[towlower(c4)]) {
 				daklakwl_buffer_delete_backwards(buf, 1);
@@ -990,12 +1005,50 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 				return 1;
 			}
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   is_accent(towlower(c3)) && wc_pos == 4) {
-		// TODO: handle uouw and uyee
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2)
+		 && is_accent(towlower(c3)) && wc_pos == 4) {
+		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
 		char const *const *c2_accents = vowels_accents[c2];
-		if (c1_accents && c1_accents[c3]) {
+		wchar_t lower_c1 = towlower(c1);
+		if (towlower(c0) == 'u'
+		    && (lower_c1 == L'ơ' || lower_c1 == L'ớ' || lower_c1 == L'ờ'
+			|| lower_c1 == L'ỡ' || lower_c1 == L'ở'
+			|| lower_c1 == L'ợ')
+		    && c0_accents && c0_accents[c3]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c0_accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_steps_append(buf, offset + 0, c3);
+			return 1;
+		}
+		else if (towlower(c0) == 'u' && lower_c1 == 'o' && c1_accents
+			 && c1_accents[c3]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c0_accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c1_accents[towlower(c3)]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_steps_append(buf, offset + 0, c3);
+			daklakwl_buffer_steps_append(buf, offset + 1, c3);
+			return 1;
+		}
+		else if (towlower(c2) == 'e' && c2_accents && c2_accents[c3]) {
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, c2_accents[towlower(c3)]);
+			daklakwl_buffer_steps_append(buf, offset + 2, c3);
+			return 1;
+		}
+		else if (c1_accents && c1_accents[c3]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
 			daklakwl_buffer_move_left(buf);
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1003,14 +1056,10 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_move_right(buf);
 			daklakwl_buffer_steps_append(buf, offset + 1, c3);
 			return 1;
-		} else if (c2_accents && c2_accents[c3]) {
-			daklakwl_buffer_delete_backwards(buf, 2);
-			daklakwl_buffer_append(buf, c2_accents[towlower(c3)]);
-			daklakwl_buffer_steps_append(buf, offset + 2, c3);
-			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2) &&
-		   is_mark(towlower(c3)) && wc_pos == 4) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_vowel(c2)
+		 && is_mark(towlower(c3)) && wc_pos == 4) {
 		if (is_type2(towlower(c0), towlower(c1), towlower(c2))) {
 			char const *const *marks = vowels_marks[c2];
 			if (marks && marks[towlower(c3)]) {
@@ -1021,7 +1070,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 							     c3);
 				return 1;
 			}
-		} else {
+		}
+		else {
 			char const *const *marks = vowels_marks[c1];
 			if (marks && marks[towlower(c3)]) {
 				daklakwl_buffer_delete_backwards(buf, 1);
@@ -1035,8 +1085,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 				return 1;
 			}
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) &&
-		   is_mark(towlower(c3)) && wc_pos == 4) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2)
+		 && is_mark(towlower(c3)) && wc_pos == 4) {
 		char const *const *marks = vowels_marks[c1];
 		if (marks && marks[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1047,8 +1098,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 1, c3);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2) &&
-		   is_accent(towlower(c3)) && wc_pos == 4) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2)
+		 && is_accent(towlower(c3)) && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c1];
 		if (accents && accents[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1059,8 +1111,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 1, c3);
 			return 1;
 		}
-	} else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2) &&
-		   is_mark(towlower(c3)) && wc_pos == 4) {
+	}
+	else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2)
+		 && is_mark(towlower(c3)) && wc_pos == 4) {
 		char const *const *marks = vowels_marks[c0];
 		if (marks && marks[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1073,8 +1126,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 0, c3);
 			return 1;
 		}
-	} else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2) &&
-		   is_accent(towlower(c3)) && wc_pos == 4) {
+	}
+	else if (is_vowel(c0) && !is_vowel(c1) && !is_vowel(c2)
+		 && is_accent(towlower(c3)) && wc_pos == 4) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1087,8 +1141,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 0, c3);
 			return 1;
 		}
-	} else if (is_vowel(c0) && !is_vowel(c1) && is_accent(towlower(c2)) &&
-		   wc_pos == 3) {
+	}
+	else if (is_vowel(c0) && !is_vowel(c1) && is_accent(towlower(c2))
+		 && wc_pos == 3) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c2)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1099,8 +1154,9 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 0, c2);
 			return 1;
 		}
-	} else if (is_vowel(c0) && !is_vowel(c1) && is_mark(towlower(c2)) &&
-		   wc_pos == 3) {
+	}
+	else if (is_vowel(c0) && !is_vowel(c1) && is_mark(towlower(c2))
+		 && wc_pos == 3) {
 		char const *const *marks = vowels_marks[c0];
 		if (marks && marks[towlower(c2)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1111,45 +1167,50 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 0, c2);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_accent(towlower(c2)) &&
-		   wc_pos == 3) {
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_accent(towlower(c2))
+		 && wc_pos == 3) {
 		char const *const *c0_accents = vowels_accents[c0];
 		char const *const *c1_accents = vowels_accents[c1];
 		wchar_t lower_c0 = towlower(c0), lower_c1 = towlower(c1),
 			lower_c2 = towlower(c2);
-		if (c1_accents && c1_accents[lower_c2] && c0_accents &&
-		    c0_accents[lower_c2] && lower_c1 == L'o') {
-			daklakwl_buffer_delete_backwards(buf, 2);
-			daklakwl_buffer_append(buf, c1_accents[lower_c2]);
-			daklakwl_buffer_steps_append(buf, offset + 1, c2);
-			return 1;
-		} else if (c1_accents && c1_accents[lower_c2] && c0_accents &&
-			   c0_accents[lower_c2] && lower_c0 == L'u') {
-			daklakwl_buffer_delete_backwards(buf, 1);
-			daklakwl_buffer_move_left(buf);
-			daklakwl_buffer_delete_backwards(buf, 1);
-			daklakwl_buffer_append(buf, c0_accents[lower_c2]);
-			daklakwl_buffer_move_right(buf);
-			daklakwl_buffer_steps_append(buf, offset + 0, c2);
-			return 1;
-		} else if (c0_accents && c0_accents[lower_c2]) {
-			daklakwl_buffer_delete_backwards(buf, 1);
-			daklakwl_buffer_move_left(buf);
-			daklakwl_buffer_delete_backwards(buf, 1);
-			daklakwl_buffer_append(buf, c0_accents[lower_c2]);
-			daklakwl_buffer_move_right(buf);
-			daklakwl_buffer_steps_append(buf, offset + 0, c2);
-			return 1;
-		} else if (c1_accents && c1_accents[lower_c2]) {
+		if (c1_accents && c1_accents[lower_c2] && c0_accents
+		    && c0_accents[lower_c2] && lower_c1 == L'o') {
 			daklakwl_buffer_delete_backwards(buf, 2);
 			daklakwl_buffer_append(buf, c1_accents[lower_c2]);
 			daklakwl_buffer_steps_append(buf, offset + 1, c2);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_vowel(c1) && is_mark(towlower(c2)) &&
-		   wc_pos == 3) {
-		if (strcasecmp(buf->gi, "gi") == 0 ||
-		    strcasecmp(buf->gi, "qu") == 0 || towlower(c1) == L'ơ') {
+		else if (c1_accents && c1_accents[lower_c2] && c0_accents
+			 && c0_accents[lower_c2] && lower_c0 == L'u') {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c0_accents[lower_c2]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_steps_append(buf, offset + 0, c2);
+			return 1;
+		}
+		else if (c0_accents && c0_accents[lower_c2]) {
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_move_left(buf);
+			daklakwl_buffer_delete_backwards(buf, 1);
+			daklakwl_buffer_append(buf, c0_accents[lower_c2]);
+			daklakwl_buffer_move_right(buf);
+			daklakwl_buffer_steps_append(buf, offset + 0, c2);
+			return 1;
+		}
+		else if (c1_accents && c1_accents[lower_c2]) {
+			daklakwl_buffer_delete_backwards(buf, 2);
+			daklakwl_buffer_append(buf, c1_accents[lower_c2]);
+			daklakwl_buffer_steps_append(buf, offset + 1, c2);
+			return 1;
+		}
+	}
+	else if (is_vowel(c0) && is_vowel(c1) && is_mark(towlower(c2))
+		 && wc_pos == 3) {
+		if (strcasecmp(buf->gi, "gi") == 0
+		    || strcasecmp(buf->gi, "qu") == 0 || towlower(c1) == L'ơ') {
 			char const *const *marks = vowels_marks[c1];
 			if (marks && marks[towlower(c2)]) {
 				daklakwl_buffer_delete_backwards(buf, 2);
@@ -1159,7 +1220,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 							     c2);
 				return 1;
 			}
-		} else {
+		}
+		else {
 			char const *const *marks = vowels_marks[c0];
 			if (marks && marks[towlower(c2)]) {
 				daklakwl_buffer_delete_backwards(buf, 1);
@@ -1173,7 +1235,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 				return 1;
 			}
 		}
-	} else if (is_vowel(c0) && is_accent(towlower(c1)) && wc_pos == 2) {
+	}
+	else if (is_vowel(c0) && is_accent(towlower(c1)) && wc_pos == 2) {
 		char const *const *accents = vowels_accents[c0];
 		if (accents && accents[towlower(c1)]) {
 			daklakwl_buffer_delete_backwards(buf, 2);
@@ -1181,7 +1244,8 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 			daklakwl_buffer_steps_append(buf, offset + 0, c1);
 			return 1;
 		}
-	} else if (is_vowel(c0) && is_mark(towlower(c1)) && wc_pos == 2) {
+	}
+	else if (is_vowel(c0) && is_mark(towlower(c1)) && wc_pos == 2) {
 		char const *const *marks = vowels_marks[c0];
 		if (marks && marks[towlower(c1)]) {
 			daklakwl_buffer_delete_backwards(buf, 2);
@@ -1228,9 +1292,9 @@ static int daklakwl_buffer_compose_dd(struct daklakwl_buffer *buf)
 
 static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 {
-	if ((strcasecmp(buf->gi, "d") == 0 || strcmp(buf->gi, "đ") == 0 ||
-	     strcmp(buf->gi, "Đ") == 0) &&
-	    buf->len > 1) {
+	if ((strcasecmp(buf->gi, "d") == 0 || strcmp(buf->gi, "đ") == 0
+	     || strcmp(buf->gi, "Đ") == 0)
+	    && buf->len > 1) {
 		if (!daklakwl_buffer_compose_dd(buf)) {
 			size_t gi_len = strlen(buf->gi);
 			struct daklakwl_buffer sub_buf = {
@@ -1255,10 +1319,12 @@ static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 			buf->pos = sub_buf.pos + gi_len;
 			free(sub_buf.wc_text);
 			return composed;
-		} else {
+		}
+		else {
 			return 1;
 		}
-	} else {
+	}
+	else {
 		return daklakwl_buffer_compose_vowels(buf);
 	}
 	return 0;
@@ -1267,15 +1333,17 @@ static int daklakwl_buffer_compose_full(struct daklakwl_buffer *buf)
 void daklakwl_buffer_gi_append(struct daklakwl_buffer *buffer, const char *utf8)
 {
 	char c = tolower(utf8[0]);
-	if (buffer->len == 0 && buffer->gi[0] == '\0' &&
-	    (c == 'g' || c == 'q' || c == 'd')) {
+	if (buffer->len == 0 && buffer->gi[0] == '\0'
+	    && (c == 'g' || c == 'q' || c == 'd')) {
 		strcat(buffer->gi, utf8);
-	} else if (strlen(buffer->gi) == 1 &&
-		   (buffer->gi[0] == 'g' || buffer->gi[0] == 'q' ||
-		    buffer->gi[0] == 'G' || buffer->gi[0] == 'Q')) {
+	}
+	else if (strlen(buffer->gi) == 1
+		 && (buffer->gi[0] == 'g' || buffer->gi[0] == 'q'
+		     || buffer->gi[0] == 'G' || buffer->gi[0] == 'Q')) {
 		if (c == 'i' || c == 'u') {
 			strcat(buffer->gi, utf8);
-		} else if (buffer->len == 0) {
+		}
+		else if (buffer->len == 0) {
 			buffer->gi[0] = '\0';
 		}
 	}
@@ -1295,8 +1363,9 @@ void daklakwl_buffer_compose(struct daklakwl_buffer *buffer)
 	int composed = daklakwl_buffer_compose_full(buffer);
 	if (composed)
 		buffer->catalyst = cN;
-	else if (!composed && buffer->catalyst && buffer->catalyst == cN &&
-		 (is_mark(cN) || is_accent(cN)) && buffer->len == buffer->pos) {
+	else if (!composed && buffer->catalyst && buffer->catalyst == cN
+		 && (is_mark(cN) || is_accent(cN))
+		 && buffer->len == buffer->pos) {
 		buffer->len = 0;
 		buffer->pos = 0;
 		buffer->text[0] = '\0';
