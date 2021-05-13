@@ -1281,6 +1281,7 @@ static int daklakwl_buffer_compose_dd(struct daklakwl_buffer *buf)
 		for (size_t i = wc_pos - 2; i > 0; i--) {
 			daklakwl_buffer_move_right(buf);
 		}
+		buf->catalyst = cN;
 		free(buf->gi);
 		buf->gi = strdup(d_accents[c0]);
 		buf->steps[0] = realloc(buf->steps[0], 3);
@@ -1364,7 +1365,7 @@ void daklakwl_buffer_compose(struct daklakwl_buffer *buffer)
 	if (composed)
 		buffer->catalyst = cN;
 	else if (!composed && buffer->catalyst && buffer->catalyst == cN
-		 && (is_mark(cN) || is_accent(cN))
+		 && (is_mark(cN) || is_accent(cN) || cN == 'd' || cN == 'D')
 		 && buffer->len == buffer->pos) {
 		buffer->len = 0;
 		buffer->pos = 0;
