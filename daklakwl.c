@@ -8,9 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <time.h>
 
 #include <poll.h>
+#include <pthread.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -23,6 +28,7 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 
 #include "buffer.h"
+#include "tray.h"
 
 #define min(a, b)                                                              \
 	({                                                                     \
@@ -37,20 +43,6 @@
 		__typeof__(b) _b = (b);                                        \
 		_a > _b ? _a : _b;                                             \
 	})
-
-struct daklakwl_state {
-	bool running;
-	struct wl_display *wl_display;
-	struct wl_registry *wl_registry;
-	struct wl_compositor *wl_compositor;
-	struct wl_shm *wl_shm;
-	struct zwp_text_input_manager_v3 *zwp_text_input_manager_v3;
-	struct zwp_input_method_manager_v2 *zwp_input_method_manager_v2;
-	struct zwp_virtual_keyboard_manager_v1 *zwp_virtual_keyboard_manager_v1;
-	struct wl_list seats;
-	struct wl_list timers;
-	int max_scale;
-};
 
 struct daklakwl_timer {
 	struct wl_list link;
@@ -127,16 +119,16 @@ static struct zwp_input_method_keyboard_grab_v2_listener const
 
 static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
 {
-	seat->zwp_input_method_v2 =
-	    zwp_input_method_manager_v2_get_input_method(
+	seat->zwp_input_method_v2
+	    = zwp_input_method_manager_v2_get_input_method(
 		seat->state->zwp_input_method_manager_v2, seat->wl_seat);
 	zwp_input_method_v2_add_listener(seat->zwp_input_method_v2,
 					 &zwp_input_method_v2_listener, seat);
-	seat->zwp_virtual_keyboard_v1 =
-	    zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(
+	seat->zwp_virtual_keyboard_v1
+	    = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(
 		seat->state->zwp_virtual_keyboard_manager_v1, seat->wl_seat);
-	seat->zwp_input_method_keyboard_grab_v2 =
-	    zwp_input_method_v2_grab_keyboard(seat->zwp_input_method_v2);
+	seat->zwp_input_method_keyboard_grab_v2
+	    = zwp_input_method_v2_grab_keyboard(seat->zwp_input_method_v2);
 	zwp_input_method_keyboard_grab_v2_add_listener(
 	    seat->zwp_input_method_keyboard_grab_v2,
 	    &zwp_input_method_keyboard_grab_v2_listener, seat);
@@ -164,6 +156,21 @@ static void daklakwl_seat_destroy(struct daklakwl_seat *seat)
 	free(seat);
 }
 
+static void
+daklakwl_send_message_to_socket_clients(struct daklakwl_state *state, char *msg,
+					int sender)
+{
+	for (int i = 2; i < state->nfds; i++) {
+		if (state->fds[i].fd != sender) {
+			int byte_cnt
+			    = send(state->fds[i].fd, msg, strlen(msg), 0);
+			if (byte_cnt == -1) {
+				perror("send message");
+			}
+		}
+	}
+}
+
 static void daklakwl_seat_composing_update(struct daklakwl_seat *seat)
 {
 	zwp_input_method_v2_set_preedit_string(
@@ -185,8 +192,13 @@ static void daklakwl_seat_composing_commit(struct daklakwl_seat *seat)
 static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 						     xkb_keycode_t keycode)
 {
-	xkb_keysym_t keysym =
-	    xkb_state_key_get_one_sym(seat->xkb_state, keycode);
+	bool alt_active = xkb_state_mod_name_is_active(
+	    seat->xkb_state, XKB_MOD_NAME_ALT, XKB_STATE_EFFECTIVE);
+	if (alt_active) {
+		return false;
+	}
+	xkb_keysym_t keysym
+	    = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
 	bool ctrl_active = xkb_state_mod_name_is_active(
 	    seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
 
@@ -230,6 +242,8 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 	case XKB_KEY_space:
 		if (ctrl_active) {
 			seat->is_composing = false;
+			daklakwl_send_message_to_socket_clients(
+			    seat->state, "daklak_off\n", -1);
 			if (seat->buffer.len != 0)
 				daklakwl_seat_composing_commit(seat);
 			return true;
@@ -256,8 +270,8 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 	if (codepoint != 0 && codepoint < 32)
 		return false;
 
-	int utf8_len =
-	    xkb_state_key_get_utf8(seat->xkb_state, keycode, NULL, 0);
+	int utf8_len
+	    = xkb_state_key_get_utf8(seat->xkb_state, keycode, NULL, 0);
 	if (utf8_len == 0)
 		return false;
 
@@ -280,8 +294,8 @@ static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
 static bool daklakwl_seat_handle_key(struct daklakwl_seat *seat,
 				     xkb_keycode_t keycode)
 {
-	xkb_keysym_t keysym =
-	    xkb_state_key_get_one_sym(seat->xkb_state, keycode);
+	xkb_keysym_t keysym
+	    = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
 	bool ctrl_active = xkb_state_mod_name_is_active(
 	    seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
 
@@ -289,6 +303,8 @@ static bool daklakwl_seat_handle_key(struct daklakwl_seat *seat,
 		return daklakwl_seat_composing_handle_key_event(seat, keycode);
 	if (keysym == XKB_KEY_space && ctrl_active) {
 		seat->is_composing = true;
+		daklakwl_send_message_to_socket_clients(seat->state,
+							"daklak_on\n", -1);
 		return true;
 	}
 	return false;
@@ -312,7 +328,8 @@ static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer)
 		    seat->zwp_virtual_keyboard_v1, seat->repeating_timestamp,
 		    seat->repeating_keycode - 8, WL_KEYBOARD_KEY_STATE_PRESSED);
 		seat->repeating_keycode = 0;
-	} else {
+	}
+	else {
 		clock_gettime(CLOCK_MONOTONIC, &seat->repeat_timer.time);
 		timer->time.tv_nsec += 1000000000 / seat->repeat_rate;
 		timespec_correct(&timer->time);
@@ -326,8 +343,8 @@ static void zwp_input_method_keyboard_grab_v2_keymap(
 {
 	struct daklakwl_seat *seat = data;
 	char *map = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (seat->xkb_keymap_string == NULL ||
-	    strcmp(seat->xkb_keymap_string, map) != 0) {
+	if (seat->xkb_keymap_string == NULL
+	    || strcmp(seat->xkb_keymap_string, map) != 0) {
 		zwp_virtual_keyboard_v1_keymap(seat->zwp_virtual_keyboard_v1,
 					       format, fd, size);
 		xkb_keymap_unref(seat->xkb_keymap);
@@ -352,9 +369,9 @@ static void zwp_input_method_keyboard_grab_v2_key(
 	xkb_keycode_t keycode = key + 8;
 	bool handled = false;
 
-	if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
-	    seat->repeating_keycode != 0 &&
-	    seat->repeating_keycode != keycode) {
+	if (state == WL_KEYBOARD_KEY_STATE_PRESSED
+	    && seat->repeating_keycode != 0
+	    && seat->repeating_keycode != keycode) {
 		if (!daklakwl_seat_handle_key(seat, keycode)) {
 			seat->repeating_keycode = 0;
 			wl_list_remove(&seat->repeat_timer.link);
@@ -365,17 +382,18 @@ static void zwp_input_method_keyboard_grab_v2_key(
 			seat->repeating_timestamp = time + seat->repeat_delay;
 			clock_gettime(CLOCK_MONOTONIC,
 				      &seat->repeat_timer.time);
-			seat->repeat_timer.time.tv_nsec +=
-			    seat->repeat_delay * 1000000;
+			seat->repeat_timer.time.tv_nsec
+			    += seat->repeat_delay * 1000000;
 			timespec_correct(&seat->repeat_timer.time);
-		} else {
+		}
+		else {
 			seat->repeating_keycode = 0;
 		}
 		return;
 	}
 
-	if (state == WL_KEYBOARD_KEY_STATE_RELEASED &&
-	    seat->repeating_keycode == keycode) {
+	if (state == WL_KEYBOARD_KEY_STATE_RELEASED
+	    && seat->repeating_keycode == keycode) {
 		seat->repeating_keycode = 0;
 		wl_list_remove(&seat->repeat_timer.link);
 		return;
@@ -384,8 +402,8 @@ static void zwp_input_method_keyboard_grab_v2_key(
 	if (seat->active && state == WL_KEYBOARD_KEY_STATE_PRESSED)
 		handled |= daklakwl_seat_handle_key(seat, keycode);
 
-	if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
-	    xkb_key_repeats(seat->xkb_keymap, keycode) && handled) {
+	if (state == WL_KEYBOARD_KEY_STATE_PRESSED
+	    && xkb_key_repeats(seat->xkb_keymap, keycode) && handled) {
 		seat->repeating_keycode = keycode;
 		seat->repeating_timestamp = time + seat->repeat_delay;
 		clock_gettime(CLOCK_MONOTONIC, &seat->repeat_timer.time);
@@ -448,7 +466,8 @@ static void zwp_input_method_keyboard_grab_v2_repeat_info(
 }
 
 static struct zwp_input_method_keyboard_grab_v2_listener const
-    zwp_input_method_keyboard_grab_v2_listener = {
+    zwp_input_method_keyboard_grab_v2_listener
+    = {
 	.keymap = zwp_input_method_keyboard_grab_v2_keymap,
 	.key = zwp_input_method_keyboard_grab_v2_key,
 	.modifiers = zwp_input_method_keyboard_grab_v2_modifiers,
@@ -534,8 +553,8 @@ zwp_input_method_v2_unavailable(void *data,
 	daklakwl_seat_destroy(seat);
 }
 
-static struct zwp_input_method_v2_listener const zwp_input_method_v2_listener =
-    {
+static struct zwp_input_method_v2_listener const zwp_input_method_v2_listener
+    = {
 	.activate = zwp_input_method_v2_activate,
 	.deactivate = zwp_input_method_v2_deactivate,
 	.surrounding_text = zwp_input_method_v2_surrounding_text,
@@ -622,8 +641,8 @@ static struct daklakwl_global const globals[] = {
 	.interface = &zwp_virtual_keyboard_manager_v1_interface,
 	.version = 1,
 	.is_singleton = true,
-	.offset =
-	    offsetof(struct daklakwl_state, zwp_virtual_keyboard_manager_v1),
+	.offset
+	= offsetof(struct daklakwl_state, zwp_virtual_keyboard_manager_v1),
     },
 };
 
@@ -642,7 +661,8 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
 	if (found->is_singleton) {
 		*(void **)((uintptr_t)data + found->offset) = wl_registry_bind(
 		    wl_registry, name, found->interface, found->version);
-	} else {
+	}
+	else {
 		found->callback(data, wl_registry_bind(wl_registry, name,
 						       found->interface,
 						       found->version));
@@ -682,8 +702,8 @@ static bool daklakwl_state_init(struct daklakwl_state *state)
 		const struct daklakwl_global *global = &globals[i];
 		if (!global->is_singleton)
 			continue;
-		struct wl_proxy **location =
-		    (struct wl_proxy **)((uintptr_t)state + global->offset);
+		struct wl_proxy **location
+		    = (struct wl_proxy **)((uintptr_t)state + global->offset);
 		if (*location == NULL) {
 			fprintf(stderr,
 				"required interface unsupported by compositor: "
@@ -699,6 +719,38 @@ static bool daklakwl_state_init(struct daklakwl_state *state)
 
 	wl_display_flush(state->wl_display);
 
+	int rc, on = 1;
+	int sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sock_fd == -1) {
+		perror("socket creation");
+		return false;
+	}
+	rc = ioctl(sock_fd, FIONBIO, (char *)&on);
+	if (rc == -1) {
+		perror("ioctl()");
+		return false;
+	}
+
+	struct sockaddr_un server;
+	memset(&server, 0, sizeof(server));
+	server.sun_family = AF_UNIX;
+	strncpy(server.sun_path, "/tmp/daklak.sock",
+		sizeof(server.sun_path) - 1);
+
+	unlink(server.sun_path);
+	if (bind(sock_fd, (struct sockaddr *)&server, sizeof(server)) == -1) {
+		perror("bind");
+		return false;
+	}
+	listen(sock_fd, SOMAXCONN);
+	state->sock_server = server;
+	memset(state->fds, 0, sizeof(state->fds));
+	state->fds[0].fd = wl_display_get_fd(state->wl_display);
+	state->fds[0].events = POLLIN;
+
+	state->fds[1].fd = sock_fd;
+	state->fds[1].events = POLLIN;
+	state->nfds = 2;
 	return true;
 }
 
@@ -715,8 +767,8 @@ static int daklakwl_state_next_timer(struct daklakwl_state *state)
 	struct daklakwl_timer *timer;
 	wl_list_for_each(timer, &state->timers, link)
 	{
-		int time = (timer->time.tv_sec - now.tv_sec) * 1000 +
-			   (timer->time.tv_nsec - now.tv_nsec) / 1000000;
+		int time = (timer->time.tv_sec - now.tv_sec) * 1000
+			   + (timer->time.tv_nsec - now.tv_nsec) / 1000000;
 		if (time < timeout)
 			timeout = time;
 	}
@@ -732,9 +784,9 @@ static void daklakwl_state_run_timers(struct daklakwl_state *state)
 	struct daklakwl_timer *timer, *tmp;
 	wl_list_for_each_safe(timer, tmp, &state->timers, link)
 	{
-		bool expired = timer->time.tv_sec < now.tv_sec ||
-			       (timer->time.tv_sec == now.tv_sec &&
-				timer->time.tv_nsec < now.tv_nsec);
+		bool expired = timer->time.tv_sec < now.tv_sec
+			       || (timer->time.tv_sec == now.tv_sec
+				   && timer->time.tv_nsec < now.tv_nsec);
 		if (expired)
 			timer->callback(timer);
 	}
@@ -744,40 +796,110 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 {
 	state->running = true;
 	signal(SIGINT, sigint);
+	int current_size, on = 1;
+	bool error = false, compressed_fds = false;
+	char buffer[1024];
 	while (state->running && !interrupted) {
-		struct pollfd pfd = {
-		    .fd = wl_display_get_fd(state->wl_display),
-		    .events = POLLIN,
-		};
-
-		if (poll(&pfd, 1, daklakwl_state_next_timer(state)) == -1) {
+		int timeout = daklakwl_state_next_timer(state);
+		printf("%d\n", timeout);
+		if (poll(state->fds, state->nfds, timeout) == -1) {
 			if (errno == EINTR)
 				continue;
 			perror("poll");
 			break;
 		}
+		current_size = state->nfds;
+		for (int i = 0; i < current_size; i++) {
+			if (state->fds[i].revents == 0) {
+				continue;
+			}
+			else if (state->fds[i].revents != POLLIN) {
+				close(state->fds[i].fd);
+				state->fds[i].fd = -1;
+				compressed_fds = true;
+				perror("revents");
+				continue;
+			}
+			if (i == 0) {
+				while (
+				    wl_display_prepare_read(state->wl_display)
+				    != 0)
+					wl_display_dispatch_pending(
+					    state->wl_display);
+				if (state->fds[i].events & POLLIN)
+					wl_display_read_events(
+					    state->wl_display);
+				else
+					wl_display_cancel_read(
+					    state->wl_display);
 
-		while (wl_display_prepare_read(state->wl_display) != 0)
-			wl_display_dispatch_pending(state->wl_display);
+				if (wl_display_dispatch_pending(
+					state->wl_display)
+				    == -1) {
+					perror("wl_display_dispatch");
+					error = true;
+					break;
+				}
 
-		if (pfd.events & POLLIN)
-			wl_display_read_events(state->wl_display);
-		else
-			wl_display_cancel_read(state->wl_display);
+				daklakwl_state_run_timers(state);
 
-		if (wl_display_dispatch_pending(state->wl_display) == -1) {
-			perror("wl_display_dispatch");
-			break;
+				wl_display_flush(state->wl_display);
+
+				if (wl_list_empty(&state->seats)) {
+					fprintf(stderr,
+						"No seats with input-method "
+						"available.\n");
+					error = true;
+					break;
+				}
+			}
+			else if (i == 1) {
+				int new_fd
+				    = accept(state->fds[1].fd, NULL, NULL);
+				if (new_fd == -1) {
+					perror("connect");
+					continue;
+				}
+
+				printf("New incomming connection: %d\n",
+				       new_fd);
+				ioctl(new_fd, FIONBIO, (char *)&on);
+				state->fds[state->nfds].fd = new_fd;
+				state->fds[state->nfds].events = POLLIN;
+				state->nfds++;
+			}
+			else {
+				memset(buffer, 0, sizeof(buffer));
+				int rc = recv(state->fds[i].fd, buffer,
+					      sizeof(buffer), 0);
+				if (rc == -1) {
+					perror("recv");
+					continue;
+				}
+				else if (rc == 0) {
+					close(state->fds[i].fd);
+					state->fds[i].fd = -1;
+					compressed_fds = true;
+				}
+				printf("recveiced: %s\n", buffer);
+			}
 		}
 
-		daklakwl_state_run_timers(state);
-
-		wl_display_flush(state->wl_display);
-
-		if (wl_list_empty(&state->seats)) {
-			fprintf(stderr,
-				"No seats with input-method available.\n");
+		if (error) {
 			break;
+		}
+		if (compressed_fds) {
+			compressed_fds = false;
+			for (int i = 0; i < state->nfds; i++) {
+				if (state->fds[i].fd == -1) {
+					for (int j = i; j < state->nfds; j++) {
+						state->fds[j].fd
+						    = state->fds[j + 1].fd;
+					}
+					i--;
+					state->nfds--;
+				}
+			}
 		}
 	}
 	signal(SIGINT, SIG_DFL);
@@ -807,9 +929,11 @@ static void daklakwl_state_finish(struct daklakwl_state *state)
 int main(void)
 {
 	setlocale(LC_CTYPE, "en_US.utf8");
+	pthread_t indicator_thread;
 	struct daklakwl_state state = {0};
 	if (!daklakwl_state_init(&state))
 		return 1;
+	pthread_create(&indicator_thread, NULL, (void *)&run_tray, &state);
 	daklakwl_state_run(&state);
 	daklakwl_state_finish(&state);
 }
