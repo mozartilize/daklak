@@ -1101,6 +1101,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 	}
 	else if (is_vowel(c0) && is_vowel(c1) && !is_vowel(c2)
 		 && is_accent(towlower(c3)) && wc_pos == 4) {
+		printf("ay");
 		char const *const *accents = vowels_accents[c1];
 		if (accents && accents[towlower(c3)]) {
 			daklakwl_buffer_delete_backwards(buf, 1);
@@ -1175,7 +1176,7 @@ static int daklakwl_buffer_compose_vowels(struct daklakwl_buffer *buf)
 		wchar_t lower_c0 = towlower(c0), lower_c1 = towlower(c1),
 			lower_c2 = towlower(c2);
 		if (c1_accents && c1_accents[lower_c2] && c0_accents
-		    && c0_accents[lower_c2] && lower_c1 == L'o') {
+		    && c0_accents[lower_c2] && lower_c0 == L'o') {
 			daklakwl_buffer_delete_backwards(buf, 2);
 			daklakwl_buffer_append(buf, c1_accents[lower_c2]);
 			daklakwl_buffer_steps_append(buf, offset + 1, c2);
