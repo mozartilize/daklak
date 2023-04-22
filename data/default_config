@@ -1,0 +1,10 @@
+active-at-startup
+
+composing-bindings {
+    space select
+    Escape discard
+    Backspace delete-left
+    Delete delete-right
+    Left move-left
+    Right move-right
+}
