@@ -19,8 +19,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <scfg.h>
 #include <wayland-client.h>
-#include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "input-method-unstable-v2-client-protocol.h"
@@ -28,6 +28,8 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 
 #include "buffer.h"
+#include "config.h"
+#include "daklakwl.h"
 #include "tray.h"
 
 #define min(a, b)                                                              \
@@ -44,63 +46,8 @@
 		_a > _b ? _a : _b;                                             \
 	})
 
-struct daklakwl_timer {
-	struct wl_list link;
-	struct timespec time;
-	void (*callback)(struct daklakwl_timer *timer);
-};
-
-struct daklakwl_seat {
-	struct wl_list link;
-	struct daklakwl_state *state;
-	struct wl_seat *wl_seat;
-
-	bool are_protocols_initted;
-	struct zwp_text_input_v3 *zwp_text_input_v3;
-	struct zwp_input_method_v2 *zwp_input_method_v2;
-	struct zwp_input_method_keyboard_grab_v2
-	    *zwp_input_method_keyboard_grab_v2;
-	struct zwp_virtual_keyboard_v1 *zwp_virtual_keyboard_v1;
-
-	char *xkb_keymap_string;
-	struct xkb_context *xkb_context;
-	struct xkb_keymap *xkb_keymap;
-	struct xkb_state *xkb_state;
-
-	// wl_seat
-	char *name;
-
-	// zwp_input_method_v2
-	bool pending_activate, active;
-	char *pending_surrounding_text, *surrounding_text;
-	uint32_t pending_surrounding_text_cursor, surrounding_text_cursor;
-	uint32_t pending_surrounding_text_anchor, surrounding_text_anchor;
-	uint32_t pending_text_change_cause, text_change_cause;
-	uint32_t pending_content_type_hint, content_type_hint;
-	uint32_t pending_content_type_purpose, content_type_purpose;
-	uint32_t done_events_received;
-
-	// zwp_input_method_keyboard_grab_v2
-	uint32_t repeat_rate;
-	uint32_t repeat_delay;
-	xkb_keycode_t pressed[64];
-	xkb_keycode_t repeating_keycode;
-	uint32_t repeating_timestamp;
-	struct daklakwl_timer repeat_timer;
-
-	struct daklakwl_buffer buffer;
-
-	// composing
-	bool is_composing;
-};
-
-static struct wl_seat_listener const wl_seat_listener;
-static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat);
-static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer);
-
-static void daklakwl_seat_init(struct daklakwl_seat *seat,
-			       struct daklakwl_state *state,
-			       struct wl_seat *wl_seat)
+void daklakwl_seat_init(struct daklakwl_seat *seat,
+			struct daklakwl_state *state, struct wl_seat *wl_seat)
 {
 	seat->state = state;
 	seat->wl_seat = wl_seat;
@@ -113,11 +60,7 @@ static void daklakwl_seat_init(struct daklakwl_seat *seat,
 	seat->is_composing = true;
 }
 
-static struct zwp_input_method_v2_listener const zwp_input_method_v2_listener;
-static struct zwp_input_method_keyboard_grab_v2_listener const
-    zwp_input_method_keyboard_grab_v2_listener;
-
-static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
+void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
 {
 	seat->zwp_input_method_v2
 	    = zwp_input_method_manager_v2_get_input_method(
@@ -135,7 +78,7 @@ static void daklakwl_seat_init_protocols(struct daklakwl_seat *seat)
 	seat->are_protocols_initted = true;
 }
 
-static void daklakwl_seat_destroy(struct daklakwl_seat *seat)
+void daklakwl_seat_destroy(struct daklakwl_seat *seat)
 {
 	daklakwl_buffer_destroy(&seat->buffer);
 	free(seat->pending_surrounding_text);
@@ -171,7 +114,7 @@ daklakwl_send_message_to_socket_clients(struct daklakwl_state *state, char *msg,
 	}
 }
 
-static void daklakwl_seat_composing_update(struct daklakwl_seat *seat)
+void daklakwl_seat_composing_update(struct daklakwl_seat *seat)
 {
 	zwp_input_method_v2_set_preedit_string(
 	    seat->zwp_input_method_v2, seat->buffer.text, seat->buffer.pos,
@@ -180,7 +123,7 @@ static void daklakwl_seat_composing_update(struct daklakwl_seat *seat)
 				   seat->done_events_received);
 }
 
-static void daklakwl_seat_composing_commit(struct daklakwl_seat *seat)
+void daklakwl_seat_composing_commit(struct daklakwl_seat *seat)
 {
 	zwp_input_method_v2_commit_string(seat->zwp_input_method_v2,
 					  seat->buffer.text);
@@ -189,122 +132,120 @@ static void daklakwl_seat_composing_commit(struct daklakwl_seat *seat)
 	daklakwl_buffer_clear(&seat->buffer);
 }
 
-static bool daklakwl_seat_composing_handle_key_event(struct daklakwl_seat *seat,
-						     xkb_keycode_t keycode)
+int daklakwl_binding_compare(void const *_a, void const *_b)
 {
-	bool alt_active = xkb_state_mod_name_is_active(
-	    seat->xkb_state, XKB_MOD_NAME_ALT, XKB_STATE_EFFECTIVE);
-	if (alt_active) {
-		return false;
-	}
-	xkb_keysym_t keysym
-	    = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
-	bool ctrl_active = xkb_state_mod_name_is_active(
-	    seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
-
-	switch (keysym) {
-	case XKB_KEY_BackSpace:
-		if (seat->buffer.len == 0)
-			return false;
-		daklakwl_buffer_delete_backwards_all(&seat->buffer, 1);
-		daklakwl_seat_composing_update(seat);
-		if (seat->buffer.len == 0)
-			daklakwl_seat_composing_commit(seat);
-		return true;
-	case XKB_KEY_Delete:
-		if (seat->buffer.len == 0)
-			return false;
-		daklakwl_buffer_delete_forwards_all(&seat->buffer, 1);
-		daklakwl_seat_composing_update(seat);
-		if (seat->buffer.len == 0)
-			daklakwl_seat_composing_commit(seat);
-		return true;
-	case XKB_KEY_Left:
-		if (seat->buffer.len == 0)
-			return false;
-		if (seat->buffer.pos == 0) {
-			daklakwl_seat_composing_commit(seat);
-			return false;
-		}
-		daklakwl_buffer_move_left(&seat->buffer);
-		daklakwl_seat_composing_update(seat);
-		return true;
-	case XKB_KEY_Right:
-		if (seat->buffer.len == 0)
-			return false;
-		if (seat->buffer.pos == seat->buffer.len) {
-			daklakwl_seat_composing_commit(seat);
-			return false;
-		}
-		daklakwl_buffer_move_right(&seat->buffer);
-		daklakwl_seat_composing_update(seat);
-		return true;
-	case XKB_KEY_space:
-		if (ctrl_active) {
-			seat->is_composing = false;
-			daklakwl_send_message_to_socket_clients(
-			    seat->state, "daklak_off\n", -1);
-			if (seat->buffer.len != 0)
-				daklakwl_seat_composing_commit(seat);
-			return true;
-		}
-		if (seat->buffer.len == 0)
-			return false;
-		daklakwl_seat_composing_commit(seat);
-		return false;
-	case XKB_KEY_period:
-	case XKB_KEY_colon:
-	case XKB_KEY_semicolon:
-	case XKB_KEY_comma:
-	case XKB_KEY_question:
-	case XKB_KEY_Up:
-	case XKB_KEY_Down:
-	case XKB_KEY_Return:
-		if (seat->buffer.len == 0)
-			return false;
-		daklakwl_seat_composing_commit(seat);
-		return false;
-	}
-
-	uint32_t codepoint = xkb_state_key_get_utf32(seat->xkb_state, keycode);
-	if (codepoint != 0 && codepoint < 32)
-		return false;
-
-	int utf8_len
-	    = xkb_state_key_get_utf8(seat->xkb_state, keycode, NULL, 0);
-	if (utf8_len == 0)
-		return false;
-
-	char *utf8 = malloc(utf8_len + 1);
-	xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8, utf8_len + 1);
-
-	daklakwl_buffer_gi_append(&seat->buffer, utf8);
-	if (daklakwl_buffer_should_not_append(&seat->buffer, utf8)) {
-		free(utf8);
-		return false;
-	}
-	daklakwl_buffer_raw_append(&seat->buffer, utf8);
-	daklakwl_buffer_append(&seat->buffer, utf8);
-	daklakwl_buffer_compose(&seat->buffer);
-	daklakwl_seat_composing_update(seat);
-	free(utf8);
-	return true;
+	const struct daklakwl_binding *a = _a;
+	const struct daklakwl_binding *b = _b;
+	int keysym = a->keysym - b->keysym;
+	if (keysym != 0)
+		return keysym;
+	int modifiers = a->modifiers - b->modifiers;
+	if (modifiers != 0)
+		return modifiers;
+	return a->action - b->action;
 }
 
-static bool daklakwl_seat_handle_key(struct daklakwl_seat *seat,
-				     xkb_keycode_t keycode)
+int daklakwl_seat_binding_compare_without_action(void const *_a, void const *_b)
+{
+	const struct daklakwl_seat_binding *a = _a;
+	const struct daklakwl_seat_binding *b = _b;
+	int keycode = a->keycode - b->keycode;
+	if (keycode != 0)
+		return keycode;
+	return a->mod_mask - b->mod_mask;
+}
+
+bool daklakwl_seat_handle_key_bindings(struct daklakwl_seat *seat,
+				       struct wl_array *bindings,
+				       struct daklakwl_seat_binding *press)
+{
+	struct daklakwl_seat_binding *found
+	    = bsearch(press, bindings->data,
+		      bindings->size / sizeof(struct daklakwl_seat_binding),
+		      sizeof(struct daklakwl_seat_binding),
+		      daklakwl_seat_binding_compare_without_action);
+	if (found == NULL)
+		return false;
+	return daklakwl_seat_handle_action(seat, found->action);
+}
+
+bool daklakwl_seat_handle_key(struct daklakwl_seat *seat, xkb_keycode_t keycode)
 {
 	xkb_keysym_t keysym
 	    = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
-	bool ctrl_active = xkb_state_mod_name_is_active(
-	    seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
+	struct daklakwl_seat_binding press = {
+	    .keycode = keycode,
+	    .mod_mask = 0,
+	    .action = 0,
+	};
+	xkb_mod_mask_t mod_count = xkb_keymap_num_mods(seat->xkb_keymap);
+	for (xkb_mod_index_t i = 0; i < mod_count; i++) {
+		bool is_active = xkb_state_mod_index_is_active(
+		    seat->xkb_state, i, XKB_STATE_MODS_EFFECTIVE);
+		bool is_consumed = xkb_state_mod_index_is_consumed(
+		    seat->xkb_state, keycode, i);
+		bool is_relevant
+		    = (i != seat->mod_indices[DAKLAKWL_CAPS_INDEX])
+		      && (i != seat->mod_indices[DAKLAKWL_NUM_INDEX]);
+		(void)is_consumed;
+		if (is_active && is_relevant)
+			press.mod_mask |= 1 << i;
+	}
 
-	if (seat->is_composing)
-		return daklakwl_seat_composing_handle_key_event(seat, keycode);
-	if (keysym == XKB_KEY_space && ctrl_active) {
-		seat->is_composing = true;
-		daklakwl_send_message_to_socket_clients(seat->state,
-							"daklak_on\n", -1);
+	if (seat->is_composing && seat->buffer.len != 0
+	    && daklakwl_seat_handle_key_bindings(
+		seat, &seat->composing_bindings, &press)) {
+		return true;
+	}
+	if (keysym == XKB_KEY_Shift_L || keysym == XKB_KEY_Shift_R
+	    || keysym == XKB_KEY_Control_L || keysym == XKB_KEY_Control_R
+	    || keysym == XKB_KEY_Alt_L || keysym == XKB_KEY_Alt_R
+	    || keysym == XKB_KEY_Super_L || keysym == XKB_KEY_Super_R
+	    || keysym == XKB_KEY_Hyper_L || keysym == XKB_KEY_Hyper_R
+	    || keysym == XKB_KEY_Caps_Lock) {
+		return false;
+	}
+	if (seat->is_composing) {
+		bool alt_active = xkb_state_mod_name_is_active(
+		    seat->xkb_state, XKB_MOD_NAME_ALT, XKB_STATE_EFFECTIVE);
+		if (alt_active) {
+			return false;
+		}
+		xkb_keysym_t keysym
+		    = xkb_state_key_get_one_sym(seat->xkb_state, keycode);
+
+		if (!((keysym >= XKB_KEY_a && keysym <= XKB_KEY_z)
+		      || (keysym >= XKB_KEY_A && keysym <= XKB_KEY_Z))) {
+			if (seat->buffer.len == 0)
+				return false;
+			daklakwl_seat_composing_commit(seat);
+			return false;
+		}
+
+		uint32_t codepoint
+		    = xkb_state_key_get_utf32(seat->xkb_state, keycode);
+		if (codepoint != 0 && codepoint < 32)
+			return false;
+
+		int utf8_len
+		    = xkb_state_key_get_utf8(seat->xkb_state, keycode, NULL, 0);
+		if (utf8_len == 0)
+			return false;
+
+		char *utf8 = malloc(utf8_len + 1);
+		xkb_state_key_get_utf8(seat->xkb_state, keycode, utf8,
+				       utf8_len + 1);
+
+		daklakwl_buffer_gi_append(&seat->buffer, utf8);
+		if (daklakwl_buffer_should_not_append(&seat->buffer, utf8)) {
+			free(utf8);
+			return false;
+		}
+		daklakwl_buffer_raw_append(&seat->buffer, utf8);
+		daklakwl_buffer_append(&seat->buffer, utf8);
+		daklakwl_buffer_compose(&seat->buffer);
+		daklakwl_seat_composing_update(seat);
+		free(utf8);
 		return true;
 	}
 	return false;
@@ -318,7 +259,7 @@ static void timespec_correct(struct timespec *ts)
 	}
 }
 
-static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer)
+void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer)
 {
 	struct daklakwl_seat *seat = wl_container_of(timer, seat, repeat_timer);
 	seat->repeating_timestamp += 1000 / seat->repeat_rate;
@@ -336,7 +277,82 @@ static void daklakwl_seat_repeat_timer_callback(struct daklakwl_timer *timer)
 	}
 }
 
-static void zwp_input_method_keyboard_grab_v2_keymap(
+struct keycode_matches {
+	struct daklakwl_seat *seat;
+	xkb_keysym_t keysym;
+	struct wl_array keycodes;
+};
+
+static void find_keycode(struct xkb_keymap *keymap, xkb_keycode_t keycode,
+			 void *data)
+{
+	struct keycode_matches *matches = data;
+	xkb_keysym_t keysym
+	    = xkb_state_key_get_one_sym(matches->seat->xkb_state, keycode);
+	if (keysym == XKB_KEY_NoSymbol)
+		return;
+	if (matches->keysym == keysym) {
+		xkb_keycode_t *keycode_spot
+		    = wl_array_add(&matches->keycodes, sizeof(xkb_keycode_t));
+		*keycode_spot = keycode;
+	}
+}
+
+int daklakwl_seat_binding_compare(void const *_a, void const *_b)
+{
+	const struct daklakwl_seat_binding *a = _a;
+	const struct daklakwl_seat_binding *b = _b;
+	int keycode = a->keycode - b->keycode;
+	if (keycode != 0)
+		return keycode;
+	int mod_mask = a->mod_mask - b->mod_mask;
+	if (mod_mask != 0)
+		return mod_mask;
+	return a->action - b->action;
+}
+
+void daklakwl_seat_set_up_bindings(struct daklakwl_seat *seat,
+				   struct wl_array *state_bindings,
+				   struct wl_array *seat_bindings)
+{
+	struct daklakwl_binding *state_binding;
+	struct keycode_matches matches = {
+	    .seat = seat,
+	};
+	wl_array_init(&matches.keycodes);
+	wl_array_for_each(state_binding, state_bindings)
+	{
+		matches.keysym = state_binding->keysym;
+		matches.keycodes.size = 0;
+		xkb_keymap_key_for_each(seat->xkb_keymap, find_keycode,
+					&matches);
+		assert(matches.keycodes.size);
+		xkb_mod_mask_t mod_mask = 0;
+		for (int i = 0; i < _DAKLAKWL_MOD_LAST; i++) {
+			if (state_binding->modifiers & (1 << i)) {
+				mod_mask |= 1 << seat->mod_indices[i];
+			}
+		}
+		xkb_keycode_t *keycode;
+		wl_array_for_each(keycode, &matches.keycodes)
+		{
+			struct daklakwl_seat_binding *seat_binding
+			    = wl_array_add(
+				seat_bindings,
+				sizeof(struct daklakwl_seat_binding));
+			seat_binding->keycode = *keycode;
+			seat_binding->mod_mask = mod_mask;
+			seat_binding->action = state_binding->action;
+		}
+	}
+	qsort(seat_bindings->data,
+	      seat_bindings->size / sizeof(struct daklakwl_seat_binding),
+	      sizeof(struct daklakwl_seat_binding),
+	      daklakwl_seat_binding_compare);
+	wl_array_release(&matches.keycodes);
+}
+
+void zwp_input_method_keyboard_grab_v2_keymap(
     void *data,
     struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
     uint32_t format, int32_t fd, uint32_t size)
@@ -352,15 +368,40 @@ static void zwp_input_method_keyboard_grab_v2_keymap(
 		seat->xkb_keymap = xkb_keymap_new_from_string(
 		    seat->xkb_context, map, XKB_KEYMAP_FORMAT_TEXT_V1,
 		    XKB_KEYMAP_COMPILE_NO_FLAGS);
+		seat->mod_indices[DAKLAKWL_SHIFT_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_SHIFT);
+		seat->mod_indices[DAKLAKWL_CAPS_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_CAPS);
+		seat->mod_indices[DAKLAKWL_CTRL_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_CTRL);
+		seat->mod_indices[DAKLAKWL_ALT_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_ALT);
+		seat->mod_indices[DAKLAKWL_NUM_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_NUM);
+		seat->mod_indices[DAKLAKWL_MOD3_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap, "Mod3");
+		seat->mod_indices[DAKLAKWL_LOGO_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap,
+					       XKB_MOD_NAME_LOGO);
+		seat->mod_indices[DAKLAKWL_MOD5_INDEX]
+		    = xkb_keymap_mod_get_index(seat->xkb_keymap, "Mod5");
 		seat->xkb_state = xkb_state_new(seat->xkb_keymap);
 		free(seat->xkb_keymap_string);
 		seat->xkb_keymap_string = strdup(map);
+		daklakwl_seat_set_up_bindings(
+		    seat, &seat->state->config.composing_bindings,
+		    &seat->composing_bindings);
 	}
 	close(fd);
 	munmap(map, size);
 }
 
-static void zwp_input_method_keyboard_grab_v2_key(
+void zwp_input_method_keyboard_grab_v2_key(
     void *data,
     struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
     uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
@@ -441,7 +482,7 @@ forward:
 				    state);
 }
 
-static void zwp_input_method_keyboard_grab_v2_modifiers(
+void zwp_input_method_keyboard_grab_v2_modifiers(
     void *data,
     struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
     uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
@@ -455,7 +496,7 @@ static void zwp_input_method_keyboard_grab_v2_modifiers(
 					  mods_locked, group);
 }
 
-static void zwp_input_method_keyboard_grab_v2_repeat_info(
+void zwp_input_method_keyboard_grab_v2_repeat_info(
     void *data,
     struct zwp_input_method_keyboard_grab_v2 *zwp_input_method_keyboard_grab_v2,
     int32_t rate, int32_t delay)
@@ -465,7 +506,7 @@ static void zwp_input_method_keyboard_grab_v2_repeat_info(
 	seat->repeat_delay = delay;
 }
 
-static struct zwp_input_method_keyboard_grab_v2_listener const
+struct zwp_input_method_keyboard_grab_v2_listener const
     zwp_input_method_keyboard_grab_v2_listener
     = {
 	.keymap = zwp_input_method_keyboard_grab_v2_keymap,
@@ -474,9 +515,8 @@ static struct zwp_input_method_keyboard_grab_v2_listener const
 	.repeat_info = zwp_input_method_keyboard_grab_v2_repeat_info,
 };
 
-static void
-zwp_input_method_v2_activate(void *data,
-			     struct zwp_input_method_v2 *zwp_input_method_v2)
+void zwp_input_method_v2_activate(
+    void *data, struct zwp_input_method_v2 *zwp_input_method_v2)
 {
 	struct daklakwl_seat *seat = data;
 	seat->pending_activate = true;
@@ -487,15 +527,14 @@ zwp_input_method_v2_activate(void *data,
 	seat->pending_content_type_purpose = 0;
 }
 
-static void
-zwp_input_method_v2_deactivate(void *data,
-			       struct zwp_input_method_v2 *zwp_input_method_v2)
+void zwp_input_method_v2_deactivate(
+    void *data, struct zwp_input_method_v2 *zwp_input_method_v2)
 {
 	struct daklakwl_seat *seat = data;
 	seat->pending_activate = false;
 }
 
-static void zwp_input_method_v2_surrounding_text(
+void zwp_input_method_v2_surrounding_text(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2,
     char const *text, uint32_t cursor, uint32_t anchor)
 {
@@ -506,14 +545,14 @@ static void zwp_input_method_v2_surrounding_text(
 	seat->pending_surrounding_text_anchor = anchor;
 }
 
-static void zwp_input_method_v2_text_change_cause(
+void zwp_input_method_v2_text_change_cause(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2, uint32_t cause)
 {
 	struct daklakwl_seat *seat = data;
 	seat->pending_text_change_cause = cause;
 }
 
-static void zwp_input_method_v2_content_type(
+void zwp_input_method_v2_content_type(
     void *data, struct zwp_input_method_v2 *zwp_input_method_v2, uint32_t hint,
     uint32_t purpose)
 {
@@ -522,9 +561,8 @@ static void zwp_input_method_v2_content_type(
 	seat->pending_content_type_purpose = purpose;
 }
 
-static void
-zwp_input_method_v2_done(void *data,
-			 struct zwp_input_method_v2 *zwp_input_method_v2)
+void zwp_input_method_v2_done(void *data,
+			      struct zwp_input_method_v2 *zwp_input_method_v2)
 {
 	struct daklakwl_seat *seat = data;
 	bool was_active = seat->active;
@@ -543,9 +581,8 @@ zwp_input_method_v2_done(void *data,
 	}
 }
 
-static void
-zwp_input_method_v2_unavailable(void *data,
-				struct zwp_input_method_v2 *zwp_input_method_v2)
+void zwp_input_method_v2_unavailable(
+    void *data, struct zwp_input_method_v2 *zwp_input_method_v2)
 {
 	struct daklakwl_seat *seat = data;
 	fprintf(stderr, "Input method unavailable on seat \"%s\".\n",
@@ -553,36 +590,35 @@ zwp_input_method_v2_unavailable(void *data,
 	daklakwl_seat_destroy(seat);
 }
 
-static struct zwp_input_method_v2_listener const zwp_input_method_v2_listener
-    = {
-	.activate = zwp_input_method_v2_activate,
-	.deactivate = zwp_input_method_v2_deactivate,
-	.surrounding_text = zwp_input_method_v2_surrounding_text,
-	.text_change_cause = zwp_input_method_v2_text_change_cause,
-	.content_type = zwp_input_method_v2_content_type,
-	.done = zwp_input_method_v2_done,
-	.unavailable = zwp_input_method_v2_unavailable,
+struct zwp_input_method_v2_listener const zwp_input_method_v2_listener = {
+    .activate = zwp_input_method_v2_activate,
+    .deactivate = zwp_input_method_v2_deactivate,
+    .surrounding_text = zwp_input_method_v2_surrounding_text,
+    .text_change_cause = zwp_input_method_v2_text_change_cause,
+    .content_type = zwp_input_method_v2_content_type,
+    .done = zwp_input_method_v2_done,
+    .unavailable = zwp_input_method_v2_unavailable,
 };
 
-static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
-				 uint32_t capabilities)
+void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
+			  uint32_t capabilities)
 {
 	// removed
 }
 
-static void wl_seat_name(void *data, struct wl_seat *wl_seat, char const *name)
+void wl_seat_name(void *data, struct wl_seat *wl_seat, char const *name)
 {
 	struct daklakwl_seat *seat = data;
 	free(seat->name);
 	seat->name = strdup(name);
 }
 
-static struct wl_seat_listener const wl_seat_listener = {
+struct wl_seat_listener const wl_seat_listener = {
     .capabilities = wl_seat_capabilities,
     .name = wl_seat_name,
 };
 
-static void wl_seat_global(struct daklakwl_state *state, void *data)
+void wl_seat_global(struct daklakwl_state *state, void *data)
 {
 	struct wl_seat *wl_seat = data;
 	struct daklakwl_seat *seat = calloc(1, sizeof *seat);
@@ -646,9 +682,8 @@ static struct daklakwl_global const globals[] = {
     },
 };
 
-static void wl_registry_global(void *data, struct wl_registry *wl_registry,
-			       uint32_t name, char const *interface,
-			       uint32_t version)
+void wl_registry_global(void *data, struct wl_registry *wl_registry,
+			uint32_t name, char const *interface, uint32_t version)
 {
 	struct daklakwl_global global = {.name = interface};
 	struct daklakwl_global *found = bsearch(
@@ -669,23 +704,25 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
 	}
 }
 
-static void wl_registry_global_remove(void *data,
-				      struct wl_registry *wl_registry,
-				      uint32_t name)
+void wl_registry_global_remove(void *data, struct wl_registry *wl_registry,
+			       uint32_t name)
 {
 	// TODO
 }
 
-static struct wl_registry_listener const wl_registry_listener = {
+struct wl_registry_listener const wl_registry_listener = {
     .global = wl_registry_global,
     .global_remove = wl_registry_global_remove,
 };
 
-static bool daklakwl_state_init(struct daklakwl_state *state)
+bool daklakwl_state_init(struct daklakwl_state *state)
 {
 	wl_list_init(&state->seats);
 	wl_list_init(&state->timers);
-	state->max_scale = 1;
+	daklakwl_config_init(&state->config);
+
+	if (!daklakwl_config_load(&state->config))
+		return false;
 
 	state->wl_display = wl_display_connect(NULL);
 	if (state->wl_display == NULL) {
@@ -757,7 +794,7 @@ static bool daklakwl_state_init(struct daklakwl_state *state)
 static bool interrupted;
 static void sigint(int signal) { interrupted = true; }
 
-static int daklakwl_state_next_timer(struct daklakwl_state *state)
+int daklakwl_state_next_timer(struct daklakwl_state *state)
 {
 	int timeout = INT_MAX;
 	if (wl_list_empty(&state->timers))
@@ -775,7 +812,7 @@ static int daklakwl_state_next_timer(struct daklakwl_state *state)
 	return timeout;
 }
 
-static void daklakwl_state_run_timers(struct daklakwl_state *state)
+void daklakwl_state_run_timers(struct daklakwl_state *state)
 {
 	if (wl_list_empty(&state->timers))
 		return;
@@ -792,7 +829,7 @@ static void daklakwl_state_run_timers(struct daklakwl_state *state)
 	}
 }
 
-static void daklakwl_state_run(struct daklakwl_state *state)
+void daklakwl_state_run(struct daklakwl_state *state)
 {
 	state->running = true;
 	signal(SIGINT, sigint);
@@ -800,9 +837,9 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 	bool error = false, compressed_fds = false;
 	char buffer[1024];
 	while (state->running && !interrupted) {
-		int timeout = daklakwl_state_next_timer(state);
-		printf("%d\n", timeout);
-		if (poll(state->fds, state->nfds, timeout) == -1) {
+		if (poll(state->fds, state->nfds,
+			 daklakwl_state_next_timer(state))
+		    == -1) {
 			if (errno == EINTR)
 				continue;
 			perror("poll");
@@ -840,18 +877,6 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 					error = true;
 					break;
 				}
-
-				daklakwl_state_run_timers(state);
-
-				wl_display_flush(state->wl_display);
-
-				if (wl_list_empty(&state->seats)) {
-					fprintf(stderr,
-						"No seats with input-method "
-						"available.\n");
-					error = true;
-					break;
-				}
 			}
 			else if (i == 1) {
 				int new_fd
@@ -882,6 +907,25 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 					compressed_fds = true;
 				}
 				printf("recveiced: %s\n", buffer);
+				if (strcmp(buffer, "daklak_toggle\n") == 0) {
+					struct daklakwl_seat *seat, *tmp_seat;
+					wl_list_for_each_safe(
+					    seat, tmp_seat, &state->seats, link)
+					{
+						seat->is_composing
+						    = !seat->is_composing;
+						if (seat->is_composing) {
+							daklakwl_send_message_to_socket_clients(
+							    state,
+							    "daklak_on\n", -1);
+						}
+						else {
+							daklakwl_send_message_to_socket_clients(
+							    state,
+							    "daklak_off\n", -1);
+						}
+					}
+				}
 			}
 		}
 
@@ -901,12 +945,23 @@ static void daklakwl_state_run(struct daklakwl_state *state)
 				}
 			}
 		}
+
+		daklakwl_state_run_timers(state);
+
+		wl_display_flush(state->wl_display);
+
+		if (wl_list_empty(&state->seats)) {
+			fprintf(stderr, "No seats with input-method "
+					"available.\n");
+			error = true;
+			break;
+		}
 	}
 	signal(SIGINT, SIG_DFL);
 	state->running = false;
 }
 
-static void daklakwl_state_finish(struct daklakwl_state *state)
+void daklakwl_state_finish(struct daklakwl_state *state)
 {
 	struct daklakwl_seat *seat, *tmp_seat;
 	wl_list_for_each_safe(seat, tmp_seat, &state->seats, link)
@@ -924,6 +979,7 @@ static void daklakwl_state_finish(struct daklakwl_state *state)
 		wl_registry_destroy(state->wl_registry);
 	if (state->wl_display != NULL)
 		wl_display_disconnect(state->wl_display);
+	daklakwl_config_finish(&state->config);
 }
 
 int main(void)
