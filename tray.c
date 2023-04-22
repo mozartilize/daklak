@@ -32,7 +32,7 @@ static gboolean mycallback(GIOChannel *channel, GIOCondition cond,
 	GError *error = NULL;
 	AppIndicator *indicator = data;
 	GIOStatus status = g_io_channel_read_line(channel, &str_return, &length,
-				   &terminator_pos, &error);
+						  &terminator_pos, &error);
 	if (status != G_IO_STATUS_NORMAL) {
 		perror("read");
 		return TRUE;
@@ -43,7 +43,7 @@ static gboolean mycallback(GIOChannel *channel, GIOCondition cond,
 	}
 	handlecommand(str_return, indicator);
 	g_free(str_return);
-	return TRUE;	
+	return TRUE;
 }
 
 static void quit_activated(GSimpleAction *simple, GVariant *parameter,
