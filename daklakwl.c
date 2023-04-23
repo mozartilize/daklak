@@ -206,9 +206,13 @@ bool daklakwl_seat_handle_key(struct daklakwl_seat *seat, xkb_keycode_t keycode)
 		return false;
 	}
 	if (seat->is_composing) {
-		bool alt_active = xkb_state_mod_name_is_active(
-		    seat->xkb_state, XKB_MOD_NAME_ALT, XKB_STATE_EFFECTIVE);
-		if (alt_active) {
+		bool ctrl_active = xkb_state_mod_name_is_active(
+			seat->xkb_state, XKB_MOD_NAME_CTRL, XKB_STATE_EFFECTIVE);
+		bool shift_active = xkb_state_mod_name_is_active(
+			seat->xkb_state, XKB_MOD_NAME_SHIFT, XKB_STATE_EFFECTIVE);
+		if (ctrl_active || (ctrl_active && shift_active)) {
+			// like move cursor or select word or select all
+			daklakwl_seat_composing_commit(seat);
 			return false;
 		}
 		xkb_keysym_t keysym
@@ -920,10 +924,32 @@ void daklakwl_state_run(struct daklakwl_state *state)
 							    "daklak_on\n", -1);
 						}
 						else {
+							daklakwl_seat_composing_commit(seat);
 							daklakwl_send_message_to_socket_clients(
 							    state,
 							    "daklak_off\n", -1);
 						}
+					}
+				}
+				else if (strcmp(buffer, "daklak_on\n") == 0) {
+					struct daklakwl_seat *seat, *tmp_seat;
+					wl_list_for_each_safe(
+					    seat, tmp_seat, &state->seats, link)
+					{
+						seat->is_composing = true;
+						daklakwl_send_message_to_socket_clients(
+						    state, "daklak_on\n", -1);
+					}
+				}
+				else if (strcmp(buffer, "daklak_off\n") == 0) {
+					struct daklakwl_seat *seat, *tmp_seat;
+					wl_list_for_each_safe(
+					    seat, tmp_seat, &state->seats, link)
+					{
+						daklakwl_seat_composing_commit(seat);
+						seat->is_composing = false;
+						daklakwl_send_message_to_socket_clients(
+						    state, "daklak_off\n", -1);
 					}
 				}
 			}

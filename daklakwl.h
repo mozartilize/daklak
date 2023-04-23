@@ -50,7 +50,6 @@ struct daklakwl_state {
 	struct wl_registry *wl_registry;
 	struct wl_compositor *wl_compositor;
 	struct wl_shm *wl_shm;
-	struct zwp_text_input_manager_v3 *zwp_text_input_manager_v3;
 	struct zwp_input_method_manager_v2 *zwp_input_method_manager_v2;
 	struct zwp_virtual_keyboard_manager_v1 *zwp_virtual_keyboard_manager_v1;
 	struct wl_list seats;
@@ -245,5 +244,6 @@ extern struct wl_pointer_listener const wl_pointer_listener;
 extern struct wl_output_listener const wl_output_listener;
 extern struct wl_registry_listener const wl_registry_listener;
 extern struct zwp_input_method_v2_listener const zwp_input_method_v2_listener;
+extern struct zwp_text_input_v3_listener const zwp_text_input_v3_listener;
 extern struct zwp_input_method_keyboard_grab_v2_listener const
     zwp_input_method_keyboard_grab_v2_listener;

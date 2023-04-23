@@ -70,6 +70,10 @@ static bool daklakwl_seat_handle_move_right(struct daklakwl_seat *seat)
 		return true;
 	if (seat->buffer.len == 0)
 		return true;
+	if (seat->buffer.pos == seat->buffer.len) {
+		daklakwl_seat_composing_commit(seat);
+		return false;
+	}
 	daklakwl_buffer_move_right(&seat->buffer);
 	daklakwl_seat_composing_update(seat);
 	return true;

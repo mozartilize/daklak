@@ -13,10 +13,11 @@ struct daklakwl_buffer {
 	size_t pos;
 	size_t wc_len;
 	size_t wc_pos;
-	char accent;
 	char *gi;
 	char catalyst;
 	char *steps[4];
+	char *mark;
+	char *accent;
 };
 
 bool daklakwl_buffer_should_not_append(struct daklakwl_buffer *, char const *);
