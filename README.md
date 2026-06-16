@@ -1,5 +1,7 @@
 # daklak
 
+See https://github.com/mozartilize/daklak-rs
+
 Work-in-progress Vietnamese input method for sway
 
 ## Usage
